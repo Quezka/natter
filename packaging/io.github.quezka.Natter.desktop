@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Natter
+GenericName=Messenger
+Comment=WhatsApp Web in a lightweight native window
+Exec=natter
+Icon=io.github.quezka.Natter
+Terminal=false
+StartupWMClass=io.github.quezka.Natter
+Categories=Network;InstantMessaging;Chat;
+Keywords=whatsapp;chat;messages;messenger;
+SingleMainWindow=true

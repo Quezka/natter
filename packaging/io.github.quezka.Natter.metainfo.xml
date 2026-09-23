@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.quezka.Natter</id>
+  <name>Natter</name>
+  <summary>WhatsApp Web in a lightweight native window</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <description>
+    <p>Natter runs WhatsApp Web in the system webview instead of a bundled browser, so it
+    starts fast and stays light. Closing the window keeps it running for notifications.</p>
+    <p>Natter is not affiliated with WhatsApp or Meta.</p>
+  </description>
+  <launchable type="desktop-id">io.github.quezka.Natter.desktop</launchable>
+  <content_rating type="oars-1.1"/>
+</component>
