@@ -7,8 +7,8 @@ import sys
 from pathlib import Path
 from urllib.parse import urlsplit
 
-APP_NAME = "Natter"
-APP_ID = "io.github.quezka.Natter"
+from natter import APP_ID, APP_NAME  # noqa: F401 (re-exported for the backends)
+
 URL = "https://web.whatsapp.com/"
 
 # WhatsApp Web refuses WebKitGTK's own user agent ("browser not supported"), so the

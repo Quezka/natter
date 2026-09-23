@@ -1,14 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- AppStream metadata: what Ubuntu App Center / GNOME Software show about Natter. -->
 <component type="desktop-application">
   <id>io.github.quezka.Natter</id>
+  <metadata_license>CC0-1.0</metadata_license>
+
   <name>Natter</name>
   <summary>WhatsApp Web in a lightweight native window</summary>
-  <metadata_license>CC0-1.0</metadata_license>
+  <developer id="io.github.quezka">
+    <name>Quezka</name>
+  </developer>
+
   <description>
     <p>Natter runs WhatsApp Web in the system webview instead of a bundled browser, so it
     starts fast and stays light. Closing the window keeps it running for notifications.</p>
     <p>Natter is not affiliated with WhatsApp or Meta.</p>
   </description>
+
   <launchable type="desktop-id">io.github.quezka.Natter.desktop</launchable>
+  <url type="homepage">https://github.com/Quezka/natter</url>
+  <url type="bugtracker">https://github.com/Quezka/natter/issues</url>
+  <update_contact>arsdom15@gmail.com</update_contact>
   <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="0.1.1" date="2026-09-23"/>
+    <release version="0.1.0" date="2026-09-23"/>
+  </releases>
 </component>

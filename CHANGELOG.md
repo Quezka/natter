@@ -4,6 +4,14 @@ All notable changes to Natter. Versions follow [Semantic Versioning](https://sem
 patch for fixes, minor for new features, major for breaking changes (while below 1.0,
 breaking changes bump the minor version).
 
+## [0.1.1] - 2026-09-23
+
+### Added
+- Developer and publisher info in every build: the Windows `.exe` shows Quezka as the
+  company, with copyright and version on the file's Details tab; the `.deb` lists Quezka as
+  maintainer; app stores (GNOME Software, Ubuntu App Center) show Quezka as the developer
+  with links to the homepage and issue tracker. `natter --version` names the developer too.
+
 ## [0.1.0] - 2026-09-23
 
 ### Added

@@ -13,13 +13,13 @@ import argparse
 import shutil
 import subprocess
 import sys
+from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-import natter  # noqa: E402  (version only)
-from natter import config  # noqa: E402
+import natter  # noqa: E402  (release metadata only; no GTK imports)
 
 PACKAGING = ROOT / "packaging"
 ASSETS = ROOT / "natter" / "assets"
@@ -35,7 +35,7 @@ PYTHONPATH=/usr/lib/natter exec /usr/bin/python3 -m natter "$@"
 def build_deb() -> Path:
     stage = BUILD / "deb"
     shutil.rmtree(stage, ignore_errors=True)
-    app_id = config.APP_ID
+    app_id = natter.APP_ID
 
     shutil.copytree(ROOT / "natter", stage / "usr/lib/natter/natter",
                     ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
@@ -59,8 +59,8 @@ Section: net
 Priority: optional
 Architecture: all
 Depends: {DEB_DEPENDS}
-Maintainer: Quezka <noreply@github.com>
-Homepage: https://github.com/Quezka/natter
+Maintainer: {natter.DEVELOPER} <{natter.MAINTAINER_EMAIL}>
+Homepage: {natter.HOMEPAGE}
 Description: WhatsApp Web in a lightweight native window
  Natter runs WhatsApp Web in the system webview (WebKitGTK) instead of a
  bundled browser. Not affiliated with WhatsApp or Meta.
@@ -71,22 +71,53 @@ Description: WhatsApp Web in a lightweight native window
     return target
 
 
+def write_windows_version_file() -> Path:
+    """File properties shown in Windows Explorer (Details tab) for Natter.exe."""
+    parts = [int(p) for p in natter.__version__.split(".")]
+    nums = tuple(parts + [0] * (4 - len(parts)))
+    strings = {
+        "CompanyName": natter.DEVELOPER,
+        "FileDescription": f"{natter.APP_NAME}: WhatsApp Web in a lightweight native window",
+        "FileVersion": natter.__version__,
+        "InternalName": natter.APP_NAME,
+        "LegalCopyright": f"Copyright (c) {date.today().year} {natter.DEVELOPER}",
+        "OriginalFilename": f"{natter.APP_NAME}.exe",
+        "ProductName": natter.APP_NAME,
+        "ProductVersion": natter.__version__,
+    }
+    entries = ",\n          ".join(f"StringStruct({k!r}, {v!r})" for k, v in strings.items())
+    BUILD.mkdir(exist_ok=True)
+    target = BUILD / "windows-version.txt"
+    target.write_text(f"""VSVersionInfo(
+  ffi=FixedFileInfo(filevers={nums}, prodvers={nums}, mask=0x3f, flags=0x0,
+                    OS=0x40004, fileType=0x1, subtype=0x0, date=(0, 0)),
+  kids=[
+    StringFileInfo([StringTable('040904B0', [
+          {entries}])]),
+    VarFileInfo([VarStruct('Translation', [1033, 1200])]),
+  ],
+)
+""", encoding="utf-8")
+    return target
+
+
 def build_exe() -> Path:
     import PyInstaller.__main__
 
     PyInstaller.__main__.run([
         str(ROOT / "scripts" / "launcher.py"),
-        "--name", config.APP_NAME,
+        "--name", natter.APP_NAME,
         "--onefile",
         "--windowed",
         "--noconfirm",
         "--icon", str(ASSETS / "icon.png"),
+        "--version-file", str(write_windows_version_file()),
         "--add-data", f"{ASSETS}{';' if sys.platform == 'win32' else ':'}natter/assets",
         "--distpath", str(DIST),
         "--workpath", str(BUILD / "pyinstaller"),
         "--specpath", str(BUILD),
     ])
-    return DIST / f"{config.APP_NAME}.exe"
+    return DIST / f"{natter.APP_NAME}.exe"
 
 
 def main() -> None:

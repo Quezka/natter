@@ -8,12 +8,16 @@ dynamic = ["version"]
 description = "WhatsApp Web in a lightweight native window, using the system webview"
 readme = "README.md"
 requires-python = ">=3.10"
+authors = [{ name = "Quezka", email = "arsdom15@gmail.com" }]
 # Linux uses the distro's PyGObject + WebKitGTK (python3-gi, gir1.2-webkit2-4.1),
 # which don't come from pip.
 dependencies = ["pywebview>=5.0; sys_platform == 'win32'"]
 
 [project.optional-dependencies]
 build = ["pyinstaller>=6.0", "pillow"]
+
+[project.urls]
+Homepage = "https://github.com/Quezka/natter"
 
 [project.gui-scripts]
 natter = "natter.app:main"
