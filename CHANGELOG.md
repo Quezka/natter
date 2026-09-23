@@ -4,6 +4,11 @@ All notable changes to Natter. Versions follow [Semantic Versioning](https://sem
 patch for fixes, minor for new features, major for breaking changes (while below 1.0,
 breaking changes bump the minor version).
 
+## [0.1.2] - 2026-09-23
+
+### Fixed
+- Maintainer and contact email in the packages is now arsdom15@gmail.com.
+
 ## [0.1.1] - 2026-09-23
 
 ### Added
