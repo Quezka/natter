@@ -4,6 +4,11 @@ All notable changes to Natter. Versions follow [Semantic Versioning](https://sem
 patch for fixes, minor for new features, major for breaking changes (while below 1.0,
 breaking changes bump the minor version).
 
+## [0.1.3] - 2026-09-23
+
+### Changed
+- New green app icon, so Natter is easy to spot as your messaging app.
+
 ## [0.1.2] - 2026-09-23
 
 ### Fixed
