@@ -16,10 +16,5 @@ def main(argv: list[str] | None = None) -> int:
     if sys.platform == "win32":
         from natter import windows
         return windows.run(debug=args.debug)
-    from natter import config
-    browser = config.find_browser() if config.use_browser() else None
-    if browser:
-        from natter import chromium
-        return chromium.run(browser, debug=args.debug)
-    from natter import linux  # no Chromium browser installed: WebKitGTK (no calls)
+    from natter import linux
     return linux.run(debug=args.debug, argv=[sys.argv[0], *rest])

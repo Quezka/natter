@@ -27,8 +27,6 @@ BUILD = ROOT / "build"
 DIST = ROOT / "dist"
 
 DEB_DEPENDS = "python3 (>= 3.10), python3-gi, gir1.2-gtk-3.0, gir1.2-webkit2-4.1"
-# WhatsApp calls need a Chromium browser; without one Natter falls back to WebKitGTK.
-DEB_RECOMMENDS = "chromium | google-chrome-stable | microsoft-edge-stable | brave-browser"
 LAUNCHER = """#!/bin/sh
 PYTHONPATH=/usr/lib/natter exec /usr/bin/python3 -m natter "$@"
 """
@@ -61,13 +59,11 @@ Section: net
 Priority: optional
 Architecture: all
 Depends: {DEB_DEPENDS}
-Recommends: {DEB_RECOMMENDS}
 Maintainer: {natter.DEVELOPER} <{natter.MAINTAINER_EMAIL}>
 Homepage: {natter.HOMEPAGE}
 Description: WhatsApp Web in a lightweight native window
- Natter opens WhatsApp Web as an app window of a Chromium browser you already
- have (Chrome, Chromium, Edge or Brave), with its own profile, so calls work.
- Without one it uses WebKitGTK. Not affiliated with WhatsApp or Meta.
+ Natter runs WhatsApp Web in the system webview (WebKitGTK) instead of a
+ bundled browser. Not affiliated with WhatsApp or Meta.
 """)
     DIST.mkdir(exist_ok=True)
     target = DIST / f"natter_{natter.__version__}_all.deb"

@@ -4,6 +4,14 @@ All notable changes to Natter. Versions follow [Semantic Versioning](https://sem
 patch for fixes, minor for new features, major for breaking changes (while below 1.0,
 breaking changes bump the minor version).
 
+## [0.2.1] - 2026-09-24
+
+### Changed
+- **Back to the WebKitGTK window on Linux**, as in 0.1.x.
+  - Closing hides Natter in the background again, so notifications keep coming.
+  - Your 0.1.x login is used again.
+  - Calls stay unavailable on Linux; use WhatsApp Web in a Chromium browser for those.
+
 ## [0.2.0] - 2026-09-24
 
 ### Changed
