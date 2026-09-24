@@ -1,7 +1,11 @@
 # Natter
 
-Python 3.10+ WhatsApp Web wrapper using the system webview. Linux: GTK 3 + WebKitGTK 4.1 via
-the distro's PyGObject (`natter/linux.py`). Windows: pywebview + WebView2 (`natter/windows.py`).
+Python 3.10+ WhatsApp Web wrapper. Linux: an installed Chromium browser in `--app` mode with
+its own profile (`natter/chromium.py`, the default, needed for calls), falling back to GTK 3 +
+WebKitGTK 4.1 via the distro's PyGObject (`natter/linux.py`). Windows: pywebview + WebView2
+(`natter/windows.py`).
+- Why Chromium on Linux: WhatsApp Web only offers calls in Chromium browsers, and pip/Ubuntu
+  Qt WebEngine lacks H.264/AAC (videos wouldn't play). `--class` sets the X11 WM_CLASS.
 
 - Keep platform-independent logic in `natter/config.py` / `natter/state.py` and test it there;
   the backends stay thin.

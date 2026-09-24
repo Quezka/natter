@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
+import socket
 import sys
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -70,3 +72,76 @@ def unique_path(directory: Path, filename: str) -> Path:
         candidate = directory / f"{stem} ({n}){suffix}"
         n += 1
     return candidate
+
+
+# ---- Linux: WhatsApp in an installed Chromium-family browser ------------------------
+#
+# WhatsApp Web only offers calls in Chromium browsers, and WebKitGTK also lacks the
+# WebRTC pieces calls need. So on Linux Natter opens WhatsApp as an app window of a
+# Chromium browser you already have, with its own profile; WebKitGTK is the fallback.
+
+# In order of preference; the first one installed is used.
+BROWSERS = (
+    "google-chrome-stable", "google-chrome", "chromium", "chromium-browser",
+    "microsoft-edge-stable", "microsoft-edge", "brave-browser",
+)
+
+
+def find_browser(which=shutil.which, env=os.environ) -> str | None:
+    """The browser to use: $NATTER_BROWSER (a name or path) or the first one installed."""
+    wanted = env.get("NATTER_BROWSER", "").strip()
+    if wanted:
+        return which(wanted)
+    return next((path for name in BROWSERS if (path := which(name))), None)
+
+
+def use_browser(env=os.environ) -> bool:
+    """$NATTER_ENGINE=webkit keeps the old WebKitGTK window."""
+    return env.get("NATTER_ENGINE", "").strip().lower() != "webkit"
+
+
+def browser_profile(browser: str, home: Path | None = None) -> Path:
+    """Natter's own profile for that browser, separate from your everyday one.
+
+    Snap browsers can't write to hidden folders in your home, so theirs lives in the
+    snap's own folder.
+    """
+    name = Path(browser).name
+    real = os.path.realpath(browser)
+    if real.startswith("/snap/") or "/snap/bin/" in browser:
+        return (home or Path.home()) / "snap" / name / "common" / "natter-profile"
+    return data_dir() / "browser" / name
+
+
+def browser_command(browser: str, profile: Path, debug: bool = False) -> list[str]:
+    command = [
+        browser,
+        f"--user-data-dir={profile}",
+        f"--class={APP_ID}",  # so the dock shows Natter's icon for the window
+        "--no-first-run",
+        "--no-default-browser-check",
+        f"--app={URL}",
+    ]
+    if debug:
+        command.insert(-1, "--auto-open-devtools-for-tabs")
+    return command
+
+
+def profile_in_use(profile: Path) -> bool:
+    """True if a browser is already running with this profile (a second launch would
+    open WhatsApp twice). Chromium marks a running profile with a SingletonLock link
+    pointing at "<hostname>-<pid>"."""
+    try:
+        target = os.readlink(profile / "SingletonLock")
+    except OSError:
+        return False
+    host, _, pid = target.rpartition("-")
+    if host != socket.gethostname() or not pid.isdigit():
+        return False
+    try:
+        os.kill(int(pid), 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True

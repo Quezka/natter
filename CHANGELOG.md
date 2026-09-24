@@ -4,6 +4,22 @@ All notable changes to Natter. Versions follow [Semantic Versioning](https://sem
 patch for fixes, minor for new features, major for breaking changes (while below 1.0,
 breaking changes bump the minor version).
 
+## [0.2.0] - 2026-09-24
+
+### Changed
+- **Linux: voice and video calls work.** Natter now opens WhatsApp Web as an app window of
+  a Chromium browser you already have, in its own profile so your everyday browser isn't
+  touched. It picks the first installed of Chrome, Chromium, Edge and Brave.
+  - Calls weren't possible before: WhatsApp only offers them in Chromium browsers, and
+    WebKitGTK lacks the WebRTC pieces they need.
+  - All video formats play and notifications work as in the browser.
+  - The engine updates with your browser.
+  - The first time, link your phone again: it's a new session.
+  - Closing the window now quits WhatsApp; it no longer hides in the background.
+  - No Chromium browser installed? Natter uses WebKitGTK as before (no calls).
+  - Choose the browser with `NATTER_BROWSER=brave-browser`, or keep WebKitGTK with
+    `NATTER_ENGINE=webkit`.
+
 ## [0.1.3] - 2026-09-23
 
 ### Changed

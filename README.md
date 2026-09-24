@@ -2,13 +2,13 @@
 
 WhatsApp Web in a lightweight native window for Linux and Windows.
 
-Natter uses the webview that's already on your system instead of shipping its own copy of
-Chromium the way Electron apps do. It runs the official WhatsApp Web, so your account is
+Natter uses what's already on your system instead of shipping its own copy of Chromium
+the way Electron apps do. It runs the official WhatsApp Web, so your account is
 linked like any browser session: no unofficial protocol, no ban risk.
 
 | | Linux | Windows |
 |---|---|---|
-| Engine | WebKitGTK 4.1 (GTK 3) | Edge WebView2 (via pywebview) |
+| Engine | an installed Chromium browser in app mode (Chrome, Chromium, Edge, Brave); WebKitGTK 4.1 if none | Edge WebView2 (via pywebview) |
 | Package | `.deb`, ~16 KB | portable `.exe` |
 
 Natter is not affiliated with WhatsApp or Meta.
@@ -19,7 +19,9 @@ Natter is not affiliated with WhatsApp or Meta.
 - Desktop notifications, unread count in the title, taskbar attention
 - Links open in your browser; downloads go to Downloads
 - Voice notes, camera, clipboard images, spell-check
-- Linux: close to background (launch again to show, Ctrl+Q to quit), single instance
+- Linux: voice and video calls (needs a Chromium browser installed); single instance
+- Linux engine choice: `NATTER_BROWSER=<name or path>` picks the browser,
+  `NATTER_ENGINE=webkit` keeps the WebKitGTK window (no calls, closes to background)
 
 ## Run from source
 
@@ -51,5 +53,6 @@ with both packages and the matching `CHANGELOG.md` section as notes.
 
 - `natter/config.py`: URLs, user agent, link policy, paths (pure, tested)
 - `natter/state.py`: remembered window state (pure, tested)
-- `natter/linux.py`: GTK + WebKitGTK backend
+- `natter/chromium.py`: Linux backend, WhatsApp as a Chromium app window (the default)
+- `natter/linux.py`: GTK + WebKitGTK backend (fallback)
 - `natter/windows.py`: pywebview + WebView2 backend
