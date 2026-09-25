@@ -47,3 +47,36 @@ def test_layout_lists_every_item_in_order():
     root_id, _props, children = tray._layout()
     assert root_id == 0
     assert [c.unpack()[0] for c in children] == [1, 2, 5]
+
+
+def test_pixmap_variant_keeps_sizes_and_bytes():
+    pixmaps = [(1, 1, bytes([1, 2, 3, 4])), (2, 1, bytes(range(8)))]
+    unpacked = [(w, h, bytes(data)) for w, h, data in tray_linux.pixmap_variant(pixmaps).unpack()]
+    assert unpacked == pixmaps
+
+
+def test_tray_answers_property_reads_quickly():
+    # Regression: building the icon variant per read froze the main loop for ~10s at startup.
+    import time
+
+    tray = tray_linux.Tray(ICON, lambda: None, [tray_linux.MenuItem(1, "Open")])
+    iface = "org.kde.StatusNotifierItem"
+    props = ["Category", "Id", "Title", "Status", "WindowId", "IconName", "IconPixmap",
+             "AttentionIconName", "AttentionIconPixmap", "OverlayIconName",
+             "OverlayIconPixmap", "ToolTip", "ItemIsMenu", "Menu"]
+    start = time.monotonic()
+    values = {p: tray._on_get_property(None, None, None, iface, p) for p in props}
+    assert time.monotonic() - start < 0.1
+    assert all(v is not None for v in values.values())
+    assert values["IconPixmap"].get_type_string() == "a(iiay)"
+    assert len(values["IconPixmap"].unpack()) == len(tray_linux.ICON_SIZES)
+    assert tray._on_get_property(None, None, None, iface, "Nope") is None
+
+
+def test_unread_switches_to_the_badged_icon():
+    tray = tray_linux.Tray(ICON, lambda: None, [])
+    get = lambda p: tray._on_get_property(None, None, None, "org.kde.StatusNotifierItem", p)  # noqa: E731
+    plain = get("IconPixmap").unpack()
+    tray.set_unread(2)
+    assert get("IconPixmap").unpack() != plain
+    assert get("ToolTip").unpack()[3] == "Natter: 2 unread chats"

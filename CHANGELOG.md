@@ -4,6 +4,14 @@ All notable changes to Natter. Versions follow [Semantic Versioning](https://sem
 patch for fixes, minor for new features, major for breaking changes (while below 1.0,
 breaking changes bump the minor version).
 
+## [0.3.1] - 2026-09-25
+
+### Fixed
+- **Linux: slow startup and WhatsApp stuck loading.** The tray icon froze Natter for about
+  a second every time the panel read it, about 12 seconds at startup, and again whenever
+  the unread count changed. That held up WhatsApp, so it took ages to appear and could
+  hang on "downloading messages". WhatsApp now starts loading in about 3 seconds.
+
 ## [0.3.0] - 2026-09-25
 
 ### Added

@@ -128,16 +128,29 @@ def _later(callback: Callable[[], object]) -> None:
 
 def argb_pixmap(pixels: bytes, width: int, height: int, rowstride: int, channels: int) -> bytes:
     """GdkPixbuf RGB(A) rows to the packed big-endian ARGB32 that StatusNotifierItem wants."""
+    rows = b"".join(pixels[y * rowstride:y * rowstride + width * channels] for y in range(height))
     out = bytearray(width * height * 4)
-    i = 0
-    for y in range(height):
-        row = y * rowstride
-        for x in range(width):
-            p = row + x * channels
-            out[i] = pixels[p + 3] if channels == 4 else 255
-            out[i + 1:i + 4] = pixels[p:p + 3]
-            i += 4
+    out[0::4] = rows[3::4] if channels == 4 else b"\xff" * (width * height)
+    out[1::4] = rows[0::channels]
+    out[2::4] = rows[1::channels]
+    out[3::4] = rows[2::channels]
     return bytes(out)
+
+
+def pixmap_variant(pixmaps: list[tuple[int, int, bytes]]) -> GLib.Variant:
+    """An `a(iiay)` variant built in bulk.
+
+    GLib.Variant("a(iiay)", ...) converts every byte to its own variant in Python, which
+    takes most of a second for the tray icon and freezes the main loop (and WebKit with it).
+    """
+    return GLib.Variant.new_array(GLib.VariantType("(iiay)"), [
+        GLib.Variant.new_tuple(
+            GLib.Variant("i", width),
+            GLib.Variant("i", height),
+            GLib.Variant.new_from_bytes(GLib.VariantType("ay"), GLib.Bytes.new(data), True),
+        )
+        for width, height, data in pixmaps
+    ])
 
 
 def render_pixmaps(svg: str) -> list[tuple[int, int, bytes]]:
@@ -163,7 +176,8 @@ class Tray:
         self.items = items
         self.unread = 0
         self.revision = 1
-        self._icons = {False: render_pixmaps(svg), True: render_pixmaps(config.badged_svg(svg))}
+        self._icons = {False: pixmap_variant(render_pixmaps(svg)),
+                       True: pixmap_variant(render_pixmaps(config.badged_svg(svg)))}
         self._bus: Gio.DBusConnection | None = None
         self._name = f"org.kde.StatusNotifierItem-{os.getpid()}-1"
         self._node = Gio.DBusNodeInfo.new_for_xml(NODE_XML)
@@ -214,31 +228,32 @@ class Tray:
             self._bus.emit_signal(None, path, iface, signal, params)
 
     def _on_get_property(self, _bus, _sender, _path, iface, prop):
+        # Build only the property asked for: the tray host reads them one at a time.
         if iface == "com.canonical.dbusmenu":
             return {
-                "Version": GLib.Variant("u", 3),
-                "TextDirection": GLib.Variant("s", "ltr"),
-                "Status": GLib.Variant("s", "normal"),
-                "IconThemePath": GLib.Variant("as", []),
-            }.get(prop)
-        pixmap = GLib.Variant("a(iiay)", self._icons[self.unread > 0])
+                "Version": lambda: GLib.Variant("u", 3),
+                "TextDirection": lambda: GLib.Variant("s", "ltr"),
+                "Status": lambda: GLib.Variant("s", "normal"),
+                "IconThemePath": lambda: GLib.Variant("as", []),
+            }.get(prop, lambda: None)()
         title = config.tray_tooltip(self.unread)
+        no_pixmap = lambda: GLib.Variant("a(iiay)", [])  # noqa: E731
         return {
-            "Category": GLib.Variant("s", "Communications"),
-            "Id": GLib.Variant("s", APP_ID),
-            "Title": GLib.Variant("s", title),
-            "Status": GLib.Variant("s", "Active"),
-            "WindowId": GLib.Variant("i", 0),
-            "IconName": GLib.Variant("s", ""),
-            "IconPixmap": pixmap,
-            "AttentionIconName": GLib.Variant("s", ""),
-            "AttentionIconPixmap": GLib.Variant("a(iiay)", []),
-            "OverlayIconName": GLib.Variant("s", ""),
-            "OverlayIconPixmap": GLib.Variant("a(iiay)", []),
-            "ToolTip": GLib.Variant("(sa(iiay)ss)", ("", [], APP_NAME, title)),
-            "ItemIsMenu": GLib.Variant("b", False),
-            "Menu": GLib.Variant("o", MENU_PATH),
-        }.get(prop)
+            "Category": lambda: GLib.Variant("s", "Communications"),
+            "Id": lambda: GLib.Variant("s", APP_ID),
+            "Title": lambda: GLib.Variant("s", title),
+            "Status": lambda: GLib.Variant("s", "Active"),
+            "WindowId": lambda: GLib.Variant("i", 0),
+            "IconName": lambda: GLib.Variant("s", ""),
+            "IconPixmap": lambda: self._icons[self.unread > 0],
+            "AttentionIconName": lambda: GLib.Variant("s", ""),
+            "AttentionIconPixmap": no_pixmap,
+            "OverlayIconName": lambda: GLib.Variant("s", ""),
+            "OverlayIconPixmap": no_pixmap,
+            "ToolTip": lambda: GLib.Variant("(sa(iiay)ss)", ("", [], APP_NAME, title)),
+            "ItemIsMenu": lambda: GLib.Variant("b", False),
+            "Menu": lambda: GLib.Variant("o", MENU_PATH),
+        }.get(prop, lambda: None)()
 
     def _on_method(self, _bus, _sender, _path, _iface, method, params, invocation) -> None:
         reply = None
