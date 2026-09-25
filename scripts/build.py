@@ -26,7 +26,8 @@ ASSETS = ROOT / "natter" / "assets"
 BUILD = ROOT / "build"
 DIST = ROOT / "dist"
 
-DEB_DEPENDS = "python3 (>= 3.10), python3-gi, gir1.2-gtk-3.0, gir1.2-webkit2-4.1"
+DEB_DEPENDS = ("python3 (>= 3.10), python3-gi, gir1.2-gtk-3.0, gir1.2-webkit2-4.1, "
+               "librsvg2-common")
 LAUNCHER = """#!/bin/sh
 PYTHONPATH=/usr/lib/natter exec /usr/bin/python3 -m natter "$@"
 """
@@ -112,6 +113,7 @@ def build_exe() -> Path:
         "--noconfirm",
         "--icon", str(ASSETS / "icon.png"),
         "--version-file", str(write_windows_version_file()),
+        "--hidden-import", "pystray._win32",  # pystray picks its backend at runtime
         "--add-data", f"{ASSETS}{';' if sys.platform == 'win32' else ':'}natter/assets",
         "--distpath", str(DIST),
         "--workpath", str(BUILD / "pyinstaller"),

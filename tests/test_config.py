@@ -75,3 +75,25 @@ def test_data_dir_on_windows(monkeypatch, tmp_path):
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
     assert config.data_dir() == tmp_path / "Natter"
     assert config.cache_dir() == tmp_path / "Natter" / "cache"
+
+
+def test_tray_tooltip():
+    assert config.tray_tooltip(0) == "Natter"
+    assert config.tray_tooltip(1) == "Natter: 1 unread chat"
+    assert config.tray_tooltip(5) == "Natter: 5 unread chats"
+
+
+def test_badged_svg_adds_a_dot_inside_the_svg():
+    svg = '<svg viewBox="0 0 256 256"><rect/></svg>\n'
+    badged = config.badged_svg(svg)
+    assert badged.count("<circle") == 1
+    assert badged.index("<circle") < badged.index("</svg>")
+    assert config.badged_svg("not svg") == "not svg"
+
+
+def test_badged_app_icon_is_valid_xml():
+    import xml.etree.ElementTree as ET
+    from pathlib import Path
+
+    icon = (Path(config.__file__).parent / "assets" / "icon.svg").read_text()
+    ET.fromstring(config.badged_svg(icon))

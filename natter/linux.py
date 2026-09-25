@@ -10,11 +10,12 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("WebKit2", "4.1")
 from gi.repository import Gio, GLib, Gtk, WebKit2  # noqa: E402
 
-from natter import config  # noqa: E402
-from natter.state import WindowState  # noqa: E402
+from natter import autostart, config  # noqa: E402
+from natter.state import Preferences, WindowState  # noqa: E402
 
 ASSETS = Path(__file__).resolve().parent / "assets"
 ZOOM_STEP = 0.1
+MENU_SHOW, MENU_START_ON_LOGIN, MENU_QUIT = 1, 3, 5
 
 # Only the things WhatsApp Web actually asks for: notifications, the microphone for
 # voice notes, the camera for photos, and the clipboard for pasting images.
@@ -26,13 +27,17 @@ ALLOWED_PERMISSIONS = (
 
 
 class NatterApp(Gtk.Application):
-    def __init__(self, debug: bool) -> None:
+    def __init__(self, debug: bool, background: bool) -> None:
         super().__init__(application_id=config.APP_ID)
         self.debug = debug
+        self.background = background  # started at login: stay in the tray
         self.window: Gtk.ApplicationWindow | None = None
         self.view: WebKit2.WebView | None = None
+        self.tray = None
         self.state_path = config.data_dir() / "window.json"
         self.state = WindowState.load(self.state_path)
+        self.prefs_path = config.data_dir() / "preferences.json"
+        self.prefs = Preferences.load(self.prefs_path)
 
     # --- application lifecycle -------------------------------------------------
 
@@ -45,13 +50,35 @@ class NatterApp(Gtk.Application):
         self._add_action("zoom-in", lambda: self._zoom(ZOOM_STEP), "<Primary>plus", "<Primary>equal")
         self._add_action("zoom-out", lambda: self._zoom(-ZOOM_STEP), "<Primary>minus")
         self._add_action("zoom-reset", lambda: self._zoom(None), "<Primary>0")
+        if not self.prefs_path.exists():
+            self._save_prefs()
+        autostart.set_enabled(self.prefs.start_on_login)  # also refreshes a moved launcher
+        self._start_tray()
 
     def do_activate(self) -> None:
         # A second launch lands here in the running instance, which brings the
         # hidden window back instead of starting another copy.
+        first = self.window is None
+        if first:
+            self._build_window()
+        if first and self.background:
+            return  # WhatsApp loads hidden; the tray icon or a relaunch shows it
+        self._show()
+
+    def _show(self) -> None:
         if self.window is None:
             self._build_window()
         self.window.present()
+
+    def _toggle(self) -> None:
+        if self.window is not None and self.window.is_visible() and self.window.is_active():
+            self._hide()
+        else:
+            self._show()
+
+    def _hide(self) -> None:
+        self._save_state()
+        self.window.hide()
 
     def _add_action(self, name, callback, *accels) -> None:
         action = Gio.SimpleAction.new(name, None)
@@ -62,6 +89,37 @@ class NatterApp(Gtk.Application):
     def _quit(self) -> None:
         self._save_state()
         self.quit()
+
+    # --- tray and login ------------------------------------------------------------
+
+    def _start_tray(self) -> None:
+        try:
+            from natter.tray_linux import MenuItem, Tray
+            svg = (ASSETS / "icon.svg").read_text(encoding="utf-8")
+            self.tray = Tray(svg, self._toggle, [
+                MenuItem(MENU_SHOW, f"Open {config.APP_NAME}", self._show),
+                MenuItem(2, separator=True),
+                MenuItem(MENU_START_ON_LOGIN, "Start on login", self._toggle_start_on_login,
+                         checked=self.prefs.start_on_login),
+                MenuItem(4, separator=True),
+                MenuItem(MENU_QUIT, f"Quit {config.APP_NAME}", self._quit),
+            ])
+            self.tray.start()
+        except (GLib.Error, OSError, ValueError):
+            self.tray = None  # no tray: closing still hides, and relaunching shows
+
+    def _toggle_start_on_login(self) -> None:
+        self.prefs.start_on_login = not self.prefs.start_on_login
+        self._save_prefs()
+        autostart.set_enabled(self.prefs.start_on_login)
+        if self.tray is not None:
+            self.tray.set_checked(MENU_START_ON_LOGIN, self.prefs.start_on_login)
+
+    def _save_prefs(self) -> None:
+        try:
+            self.prefs.save(self.prefs_path)
+        except OSError:
+            pass
 
     # --- window and webview ------------------------------------------------------
 
@@ -122,11 +180,10 @@ class NatterApp(Gtk.Application):
         self.window, self.view = window, view
         view.load_uri(config.URL)
 
-    def _on_delete(self, window, _event) -> bool:
-        # Closing keeps WhatsApp running in the background so notifications still
-        # arrive; launch Natter again to bring it back, or press Ctrl+Q to quit.
-        self._save_state()
-        window.hide()
+    def _on_delete(self, _window, _event) -> bool:
+        # Closing keeps WhatsApp running in the tray so notifications still arrive, like
+        # Discord. The tray icon or a relaunch brings it back; Ctrl+Q or the tray quits.
+        self._hide()
         return True
 
     def _save_state(self) -> None:
@@ -180,6 +237,8 @@ class NatterApp(Gtk.Application):
     def _on_title_changed(self, view, _pspec) -> None:
         unread = config.unread_count(view.get_title())
         self.window.set_title(config.window_title(unread))
+        if self.tray is not None:
+            self.tray.set_unread(unread)
         if unread and not self.window.is_active():
             self.window.set_urgency_hint(True)
 
@@ -200,5 +259,5 @@ def _spelling_languages() -> list[str]:
     return names[:3] or ["en_US"]
 
 
-def run(debug: bool, argv: list[str]) -> int:
-    return NatterApp(debug).run(argv)
+def run(debug: bool, background: bool, argv: list[str]) -> int:
+    return NatterApp(debug, background).run(argv)

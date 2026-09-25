@@ -19,7 +19,13 @@ Natter is not affiliated with WhatsApp or Meta.
 - Desktop notifications, unread count in the title, taskbar attention
 - Links open in your browser; downloads go to Downloads
 - Voice notes, camera, clipboard images, spell-check
-- Linux: close to background (launch again to show, Ctrl+Q to quit), single instance
+- Runs in the background like Discord:
+  - a tray icon with a red dot and a count in its tooltip when chats are unread;
+  - closing the window hides it to the tray (quit from the tray menu, or Ctrl+Q on Linux);
+  - starts hidden in the tray when you log in (untick "Start on login" in the tray menu);
+  - launching it again brings the running window back instead of opening a second copy.
+- Linux tray: KDE, Ubuntu (AppIndicator extension), Cinnamon, XFCE, waybar… On plain GNOME
+  without a tray extension there's no icon; launch Natter again to bring the window back.
 
 ## Run from source
 
@@ -50,6 +56,9 @@ with both packages and the matching `CHANGELOG.md` section as notes.
 ## Layout
 
 - `natter/config.py`: URLs, user agent, link policy, paths (pure, tested)
-- `natter/state.py`: remembered window state (pure, tested)
+- `natter/state.py`: remembered window state and preferences (pure, tested)
+- `natter/autostart.py`: start on login (XDG autostart entry / Windows Run key)
+- `natter/tray_linux.py`: tray icon over D-Bus (StatusNotifierItem + dbusmenu), no extra libraries
+- `natter/single_instance.py`: one copy per user on Windows (Linux uses GApplication)
 - `natter/linux.py`: GTK + WebKitGTK backend
 - `natter/windows.py`: pywebview + WebView2 backend

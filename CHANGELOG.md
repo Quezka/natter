@@ -4,6 +4,22 @@ All notable changes to Natter. Versions follow [Semantic Versioning](https://sem
 patch for fixes, minor for new features, major for breaking changes (while below 1.0,
 breaking changes bump the minor version).
 
+## [0.3.0] - 2026-09-25
+
+### Added
+- **Runs in the background like Discord.**
+  - A tray icon with Open, Start on login and Quit. It gets a red dot when chats are
+    unread, and its tooltip shows how many.
+  - Closing the window hides Natter to the tray, so WhatsApp keeps running and
+    notifications keep coming. Quit from the tray menu (or Ctrl+Q on Linux).
+  - Starts hidden in the tray when you log in. This is on by default; untick "Start on
+    login" in the tray menu to turn it off.
+  - Windows: launching Natter again shows the running window instead of opening a second
+    copy (Linux already did this).
+- Linux: the tray works on KDE, Ubuntu (AppIndicator extension), Cinnamon, XFCE and other
+  StatusNotifier trays, without extra libraries. On GNOME without a tray extension there's
+  no icon; launch Natter again to bring the window back.
+
 ## [0.2.1] - 2026-09-24
 
 ### Changed

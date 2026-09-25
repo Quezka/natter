@@ -15,8 +15,19 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y python3-gi gir1.2-gtk-3.0 gir1.2-webkit2-4.1 python3-pytest
       - run: python3 -m pytest -q
 
+  test-windows:
+    # The tray (pystray), single-instance pipe and WebView2 backend only run on Windows.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e . pytest
+      - run: python -m pytest -q
+
   package:
-    needs: test
+    needs: [test, test-windows]
     strategy:
       fail-fast: false
       matrix:

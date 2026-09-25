@@ -26,3 +26,14 @@ def test_wrong_types_and_out_of_range_values_are_ignored_or_clamped(tmp_path):
     assert state.height == WindowState().height
     assert state.maximized is False
     assert state.zoom == 3.0
+
+
+def test_preferences_default_to_starting_on_login(tmp_path):
+    from natter.state import Preferences
+
+    path = tmp_path / "preferences.json"
+    assert Preferences.load(path).start_on_login is True
+    Preferences(start_on_login=False).save(path)
+    assert Preferences.load(path).start_on_login is False
+    path.write_text('{"start_on_login": "no"}')
+    assert Preferences.load(path).start_on_login is True

@@ -10,6 +10,12 @@ the distro's PyGObject (`natter/linux.py`). Windows: pywebview + WebView2 (`natt
 - Never use an unofficial WhatsApp protocol client (ban risk); only the official WhatsApp Web.
 - The Linux user agent must look like desktop Chrome or WhatsApp Web refuses to load.
 - `windows.py` can't be run here; WebView2 calls must go through `form.Invoke` (UI thread).
+- Background mode: `linux.py` hides on close and shows a tray from `tray_linux.py` (raw
+  StatusNotifierItem + dbusmenu over Gio, no AppIndicator lib); `windows.py` uses pystray and
+  `single_instance.py`. `--background` starts hidden; `autostart.py` writes the login entry.
+- Live-testing Linux while the user's installed Natter runs: set `linux.config.APP_ID` to a test
+  id first, or GApplication hands off to their copy (and shows their window).
 - Release metadata (version, developer, homepage) lives in `natter/__init__.py`; packaging reads it.
 - Release (automatic after each change): bump `__version__`, add a CHANGELOG section and a
-  `<release>` at the top of the metainfo (`tests/test_packaging.py` checks both), push tag `vX.Y.Z`.
+  `<release>` at the top of the metainfo (`tests/test_packaging.py` checks both), then push
+  tag `vX.Y.Z` on its own (GitHub starts no tag workflows when one push carries >3 tags).

@@ -44,6 +44,19 @@ def window_title(unread: int) -> str:
     return f"({unread}) {APP_NAME}" if unread else APP_NAME
 
 
+def tray_tooltip(unread: int) -> str:
+    if not unread:
+        return APP_NAME
+    return f"{APP_NAME}: {unread} unread chat" + ("" if unread == 1 else "s")
+
+
+def badged_svg(svg: str) -> str:
+    """The app icon with a red dot in the corner, for the tray when chats are unread."""
+    dot = '<circle cx="212" cy="44" r="40" fill="#e5484d" stroke="#fff" stroke-width="10"/>'
+    head, sep, tail = svg.rpartition("</svg>")
+    return f"{head}{dot}\n{sep}{tail}" if sep else svg
+
+
 def data_dir() -> Path:
     """Where the session (cookies, IndexedDB) and window state live."""
     if sys.platform == "win32":
