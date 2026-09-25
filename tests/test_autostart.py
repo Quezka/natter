@@ -1,6 +1,8 @@
 import configparser
 import sys
 
+import pytest
+
 from natter import APP_ID, autostart
 
 
@@ -40,6 +42,7 @@ def test_launch_command_for_the_exe(monkeypatch):
     assert autostart.launch_command() == [r"C:\Apps\Natter.exe", "--background"]
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="the .deb is Linux-only")
 def test_launch_command_for_the_deb(monkeypatch):
     monkeypatch.delattr(sys, "frozen", raising=False)
     monkeypatch.setattr(autostart, "__file__", "/usr/lib/natter/natter/autostart.py")
