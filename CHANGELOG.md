@@ -4,6 +4,17 @@ All notable changes to Natter. Versions follow [Semantic Versioning](https://sem
 patch for fixes, minor for new features, major for breaking changes (while below 1.0,
 breaking changes bump the minor version).
 
+## [0.3.2] - 2026-09-27
+
+### Changed
+- **Windows: a real installer** instead of a portable `.exe`.
+  - `Natter-…-windows-x64-setup.exe` installs Natter for your user, with no admin needed.
+  - It adds a Start menu entry, and a desktop shortcut if you want one.
+  - Uninstall it from Settings → Apps; that also removes the "Start on login" entry.
+  - Running a newer setup closes Natter, upgrades it in place without logging you out of
+    WhatsApp, and starts it again.
+  - It starts faster than the portable file did.
+
 ## [0.3.1] - 2026-09-25
 
 ### Fixed
