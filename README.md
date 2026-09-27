@@ -9,7 +9,7 @@ linked like any browser session: no unofficial protocol, no ban risk.
 | | Linux | Windows |
 |---|---|---|
 | Engine | WebKitGTK 4.1 (GTK 3) | Edge WebView2 (via pywebview) |
-| Package | `.deb`, ~16 KB | portable `.exe` |
+| Package | `.deb`, ~16 KB | setup `.exe` (per-user install) |
 
 Natter is not affiliated with WhatsApp or Meta.
 
@@ -47,7 +47,8 @@ On Windows: `pip install -e .` then `natter`.
 
 ```sh
 python3 scripts/build.py --deb   # on Linux
-python scripts/build.py --exe    # on Windows (pip install -e ".[build]" first)
+python scripts/build.py --installer  # on Windows: setup wizard, needs Inno Setup 6
+python scripts/build.py --exe        # on Windows: single portable .exe
 ```
 
 Pushing a tag `vX.Y.Z` that matches `natter.__version__` makes CI publish a GitHub release

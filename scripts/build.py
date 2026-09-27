@@ -10,6 +10,7 @@ part of Windows 10/11. PyInstaller doesn't cross-compile, so build the .exe on W
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
@@ -102,16 +103,28 @@ def write_windows_version_file() -> Path:
     return target
 
 
-def build_exe() -> Path:
+def windows_icon() -> Path:
+    """The app icon as .ico (for the .exe and the installer), made from icon.png."""
+    from PIL import Image
+
+    BUILD.mkdir(exist_ok=True)
+    target = BUILD / "natter.ico"
+    Image.open(ASSETS / "icon.png").save(
+        target, sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
+    return target
+
+
+def build_exe(onefile: bool = True) -> Path:
+    """PyInstaller build: one portable .exe, or a folder (dist/Natter) for the installer."""
     import PyInstaller.__main__
 
     PyInstaller.__main__.run([
         str(ROOT / "scripts" / "launcher.py"),
         "--name", natter.APP_NAME,
-        "--onefile",
+        "--onefile" if onefile else "--onedir",
         "--windowed",
         "--noconfirm",
-        "--icon", str(ASSETS / "icon.png"),
+        "--icon", str(windows_icon()),
         "--version-file", str(write_windows_version_file()),
         "--hidden-import", "pystray._win32",  # pystray picks its backend at runtime
         "--add-data", f"{ASSETS}{';' if sys.platform == 'win32' else ':'}natter/assets",
@@ -119,16 +132,51 @@ def build_exe() -> Path:
         "--workpath", str(BUILD / "pyinstaller"),
         "--specpath", str(BUILD),
     ])
-    return DIST / f"{natter.APP_NAME}.exe"
+    return DIST / f"{natter.APP_NAME}.exe" if onefile else DIST / natter.APP_NAME
+
+
+def find_iscc() -> str:
+    """Inno Setup's command-line compiler."""
+    candidates = [shutil.which("iscc")] + [
+        str(Path(base) / "Inno Setup 6" / "ISCC.exe")
+        for base in (os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)"),
+                     os.environ.get("ProgramFiles", r"C:\Program Files"),
+                     os.environ.get("LOCALAPPDATA", "") + r"\Programs")
+    ]
+    found = next((c for c in candidates if c and Path(c).is_file()), None)
+    if not found:
+        raise SystemExit("Inno Setup 6 not found: install it (choco install innosetup) "
+                         "or put ISCC.exe on PATH")
+    return found
+
+
+def build_installer() -> Path:
+    """A Windows setup wizard around the folder build (Start menu, uninstaller, upgrades)."""
+    folder = build_exe(onefile=False)
+    subprocess.run([
+        find_iscc(), "/Qp",
+        f"/DAppVersion={natter.__version__}",
+        f"/DPublisher={natter.DEVELOPER}",
+        f"/DHomepage={natter.HOMEPAGE}",
+        f"/DSourceDir={folder}",
+        f"/DIconFile={windows_icon()}",
+        f"/DOutputDir={DIST}",
+        str(PACKAGING / "natter.iss"),
+    ], check=True)
+    return DIST / f"{natter.APP_NAME}-{natter.__version__}-windows-x64-setup.exe"
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--deb", action="store_true")
-    mode.add_argument("--exe", action="store_true")
+    mode.add_argument("--exe", action="store_true", help="single portable .exe")
+    mode.add_argument("--installer", action="store_true",
+                      help="Windows setup wizard (needs Inno Setup 6)")
     args = parser.parse_args()
-    print(build_deb() if args.deb else build_exe())
+    if args.installer and sys.platform != "win32":
+        parser.error("--installer can only be built on Windows")
+    print(build_deb() if args.deb else build_installer() if args.installer else build_exe())
 
 
 if __name__ == "__main__":
