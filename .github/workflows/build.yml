@@ -26,51 +26,18 @@ jobs:
       - run: pip install -e . pytest
       - run: python -m pytest -q
 
-  package:
+  draft:
+    # For a tag like v1.2.3: a draft release the package jobs attach their files to.
+    # (Files go straight to the release, not to Actions artifact storage, whose quota is
+    # shared by every private repo and runs out.)
     needs: [test, test-windows]
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            build: --deb
-            artifact: dist/*.deb
-          - os: windows-latest
-            build: --installer
-            artifact: dist/*-setup.exe
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - if: runner.os == 'Windows'
-        run: pip install -e ".[build]"
-      - if: runner.os == 'Windows'
-        name: Install Inno Setup (if the runner lacks it)
-        shell: pwsh
-        run: |
-          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
-            choco install innosetup -y --no-progress
-          }
-      - run: python scripts/build.py ${{ matrix.build }}
-      - uses: actions/upload-artifact@v4
-        with:
-          # Only the release job needs these; releases keep the files for good.
-          retention-days: 1
-          name: Natter-${{ runner.os }}
-          path: ${{ matrix.artifact }}
-
-  release:
-    # Pushing a tag like v1.2.3 publishes that version's .deb and .exe.
-    needs: package
-    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - name: Check the tag matches the app version
+      - if: startsWith(github.ref, 'refs/tags/v')
+        name: Check the tag matches the app version
         run: |
           version=$(python3 -c "import re; print(re.search(r'__version__ = \"(.+?)\"', open('natter/__init__.py').read()).group(1))")
           if [ "v$version" != "$GITHUB_REF_NAME" ]; then
@@ -78,10 +45,8 @@ jobs:
             exit 1
           fi
           echo "VERSION=$version" >> "$GITHUB_ENV"
-      - uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-      - name: Publish the GitHub release
+      - if: startsWith(github.ref, 'refs/tags/v')
+        name: Create the draft release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -99,5 +64,60 @@ jobs:
           the WebView2 runtime built into Windows 10/11. It isn't code-signed, so SmartScreen
           may warn you: choose *More info → Run anyway*.
           NOTES
-          gh release create "$GITHUB_REF_NAME" --verify-tag --title "Natter $VERSION" \
-            --notes-file notes.md artifacts/Natter-Linux/*.deb artifacts/Natter-Windows/*-setup.exe
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release edit "$GITHUB_REF_NAME" --draft --notes-file notes.md
+          else
+            gh release create "$GITHUB_REF_NAME" --draft --verify-tag --title "Natter $VERSION" \
+              --notes-file notes.md
+          fi
+
+  package:
+    needs: draft
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            build: --deb
+            files: dist/*.deb
+          - os: windows-latest
+            build: --installer
+            files: dist/*-setup.exe
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - if: runner.os == 'Windows'
+        run: pip install -e ".[build]"
+      - if: runner.os == 'Windows'
+        name: Install Inno Setup (if the runner lacks it)
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup -y --no-progress
+          }
+      - run: python scripts/build.py ${{ matrix.build }}
+      - if: startsWith(github.ref, 'refs/tags/v')
+        name: Attach to the draft release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" ${{ matrix.files }} --clobber
+
+  release:
+    # Pushing a tag like v1.2.3 publishes that version's .deb and .exe once both are attached.
+    needs: package
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release edit "$GITHUB_REF_NAME" --draft=false --latest

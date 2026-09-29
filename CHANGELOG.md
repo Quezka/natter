@@ -4,6 +4,13 @@ All notable changes to Natter. Versions follow [Semantic Versioning](https://sem
 patch for fixes, minor for new features, major for breaking changes (while below 1.0,
 breaking changes bump the minor version).
 
+## [0.4.1] - 2026-09-29
+
+### Fixed
+- The 0.4.0 downloads were never published: GitHub's build-file storage was full. Release
+  builds now go straight into the release, so this can't happen again. The app is the same
+  as 0.4.0 (Russian translation and a Language choice in the tray).
+
 ## [0.4.0] - 2026-09-29
 
 ### Added
