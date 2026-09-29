@@ -2,11 +2,14 @@
 Type=Application
 Name=Natter
 GenericName=Messenger
+GenericName[ru]=Мессенджер
 Comment=WhatsApp Web in a lightweight native window
+Comment[ru]=WhatsApp Web в лёгком отдельном окне
 Exec=natter
 Icon=io.github.quezka.Natter
 Terminal=false
 StartupWMClass=io.github.quezka.Natter
 Categories=Network;InstantMessaging;Chat;
 Keywords=whatsapp;chat;messages;messenger;
+Keywords[ru]=whatsapp;ватсап;чат;сообщения;мессенджер;
 SingleMainWindow=true

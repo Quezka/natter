@@ -6,7 +6,8 @@ from pathlib import Path
 
 import webview
 
-from natter import autostart, config, single_instance
+from natter import autostart, config, i18n, single_instance
+from natter.i18n import _
 from natter.state import Preferences, WindowState
 
 ASSETS = Path(__file__).resolve().parent / "assets"
@@ -57,7 +58,15 @@ def run(debug: bool, background: bool) -> int:
         _save(prefs, prefs_path)
         autostart.set_enabled(prefs.start_on_login)
 
-    tray = _Tray(show, quit_app, toggle_start_on_login, lambda: prefs.start_on_login)
+    def set_language(code: str) -> None:
+        prefs.language = code
+        _save(prefs, prefs_path)
+        i18n.install(code)
+        autostart.set_enabled(prefs.start_on_login)
+        tray.relabel()
+
+    tray = _Tray(show, quit_app, toggle_start_on_login, lambda: prefs.start_on_login,
+                 set_language, lambda: prefs.language)
     holder["show"] = show
     tuned = False
 
@@ -97,22 +106,39 @@ def _save(obj, path: Path) -> None:
 
 
 class _Tray:
-    """pystray icon with Open / Start on login / Quit and an unread badge."""
+    """pystray icon with Open / Start on login / Language / Quit and an unread badge.
 
-    def __init__(self, on_open, on_quit, on_toggle_login, login_checked) -> None:
+    Labels are callables, so the menu follows a language change after `relabel()`.
+    """
+
+    def __init__(self, on_open, on_quit, on_toggle_login, login_checked, on_language,
+                 chosen_language) -> None:
         import pystray
         from PIL import Image
 
         self._base = Image.open(ASSETS / "icon.png").convert("RGBA")
         self._badged = _badge(self._base)
         self.unread = 0
+        def choose(code):  # pystray counts an action's arguments, so no default args
+            return lambda: on_language(code)
+
+        languages = pystray.Menu(*(
+            pystray.MenuItem((lambda _item, name=name: _(name)) if code == "" else name,
+                             choose(code),
+                             checked=lambda _item, code=code: chosen_language() == code,
+                             radio=True)
+            for code, name in i18n.LANGUAGES
+        ))
         menu = pystray.Menu(
-            pystray.MenuItem(f"Open {config.APP_NAME}", lambda: on_open(), default=True),
+            pystray.MenuItem(lambda _item: _("Open {app}").format(app=config.APP_NAME),
+                             lambda: on_open(), default=True),
             pystray.Menu.SEPARATOR,
-            pystray.MenuItem("Start on login", lambda: on_toggle_login(),
+            pystray.MenuItem(lambda _item: _("Start on login"), lambda: on_toggle_login(),
                              checked=lambda _item: login_checked()),
+            pystray.MenuItem(lambda _item: _("Language"), languages),
             pystray.Menu.SEPARATOR,
-            pystray.MenuItem(f"Quit {config.APP_NAME}", lambda: on_quit()),
+            pystray.MenuItem(lambda _item: _("Quit {app}").format(app=config.APP_NAME),
+                             lambda: on_quit()),
         )
         self.icon = pystray.Icon(config.APP_ID, self._base, config.APP_NAME, menu)
 
@@ -124,6 +150,10 @@ class _Tray:
             self.icon.stop()
         except Exception:
             pass
+
+    def relabel(self) -> None:
+        self.icon.title = config.tray_tooltip(self.unread)
+        self.icon.update_menu()
 
     def set_unread(self, unread: int) -> None:
         if unread == self.unread:

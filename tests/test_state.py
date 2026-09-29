@@ -37,3 +37,14 @@ def test_preferences_default_to_starting_on_login(tmp_path):
     assert Preferences.load(path).start_on_login is False
     path.write_text('{"start_on_login": "no"}')
     assert Preferences.load(path).start_on_login is True
+
+
+def test_preferences_remember_the_language(tmp_path):
+    from natter.state import Preferences
+
+    path = tmp_path / "preferences.json"
+    assert Preferences.load(path).language == ""
+    Preferences(language="ru").save(path)
+    assert Preferences.load(path).language == "ru"
+    path.write_text('{"language": 7}')
+    assert Preferences.load(path).language == ""

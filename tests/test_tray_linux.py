@@ -80,3 +80,14 @@ def test_unread_switches_to_the_badged_icon():
     tray.set_unread(2)
     assert get("IconPixmap").unpack() != plain
     assert get("ToolTip").unpack()[3] == "Natter: 2 unread chats"
+
+
+def test_submenus_and_radio_items_for_dbusmenu():
+    english = tray_linux.MenuItem(11, "English", checked=True, radio=True)
+    menu = tray_linux.MenuItem(6, "Language", children=[
+        tray_linux.MenuItem(10, "System", checked=False, radio=True), english])
+    assert english.properties()["toggle-type"].unpack() == "radio"
+    assert menu.properties()["children-display"].unpack() == "submenu"
+    item_id, _props, children = menu.layout()
+    assert item_id == 6 and [c.unpack()[0] for c in children] == [10, 11]
+    assert [i.id for i in tray_linux.all_items([tray_linux.MenuItem(1, "Open"), menu])] == [1, 6, 10, 11]

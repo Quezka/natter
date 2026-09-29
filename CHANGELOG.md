@@ -4,6 +4,17 @@ All notable changes to Natter. Versions follow [Semantic Versioning](https://sem
 patch for fixes, minor for new features, major for breaking changes (while below 1.0,
 breaking changes bump the minor version).
 
+## [0.4.0] - 2026-09-29
+
+### Added
+- **Russian translation** of Natter's own text: the tray menu, the unread tooltip
+  ("3 непрочитанных чата"), the login entry, `--help`, and the app's name and description in
+  the app menu and software store.
+- **Language** in the tray menu: System, English or Русский. It switches straight away, no
+  restart needed. "System" picks Russian on a Russian desktop and English otherwise.
+- WhatsApp itself isn't affected: it follows your system language, or the language you pick
+  in WhatsApp's own settings.
+
 ## [0.3.2] - 2026-09-27
 
 ### Changed

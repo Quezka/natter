@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 from natter import APP_ID, APP_NAME
+from natter.i18n import _
 
 BACKGROUND_FLAG = "--background"
 DEB_PREFIX = Path("/usr/lib/natter")
@@ -40,11 +41,12 @@ def desktop_exec(args: list[str]) -> str:
 
 
 def desktop_entry(args: list[str]) -> str:
+    comment = _("Start {app} in the background").format(app=APP_NAME)
     return (
         "[Desktop Entry]\n"
         "Type=Application\n"
         f"Name={APP_NAME}\n"
-        f"Comment=Start {APP_NAME} in the background\n"
+        f"Comment={comment}\n"
         f"Exec={desktop_exec(args)}\n"
         f"Icon={APP_ID}\n"
         "Terminal=false\n"

@@ -15,6 +15,8 @@ the distro's PyGObject (`natter/linux.py`). Windows: pywebview + WebView2 (`natt
   `single_instance.py`. `--background` starts hidden; `autostart.py` writes the login entry.
 - Live-testing Linux while the user's installed Natter runs: set `linux.config.APP_ID` to a test
   id first, or GApplication hands off to their copy (and shows their window).
+- On-screen text goes through `_()` from `natter/i18n.py` with named placeholders; add the
+  Russian to `natter/locales/ru.py` (`tests/test_i18n.py` fails on anything missing).
 - Release metadata (version, developer, homepage) lives in `natter/__init__.py`; packaging reads it.
 - Release (automatic after each change): bump `__version__`, add a CHANGELOG section and a
   `<release>` at the top of the metainfo (`tests/test_packaging.py` checks both), then push

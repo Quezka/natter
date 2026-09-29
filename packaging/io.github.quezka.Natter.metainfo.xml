@@ -6,6 +6,7 @@
 
   <name>Natter</name>
   <summary>WhatsApp Web in a lightweight native window</summary>
+  <summary xml:lang="ru">WhatsApp Web в лёгком отдельном окне</summary>
   <developer id="io.github.quezka">
     <name>Quezka</name>
   </developer>
@@ -14,7 +15,12 @@
     <p>Natter runs WhatsApp Web in the system webview instead of a bundled browser, so it
     starts fast and stays light. Like Discord, it lives in the tray: closing the window keeps
     it running for notifications, and it can start hidden when you log in.</p>
+    <p xml:lang="ru">Natter открывает WhatsApp Web в системном веб-движке, а не во встроенном
+    браузере, поэтому запускается быстро и почти не нагружает компьютер. Как Discord, он живёт
+    в трее: после закрытия окна продолжает работать ради уведомлений и может запускаться
+    свёрнутым при входе в систему.</p>
     <p>Natter is not affiliated with WhatsApp or Meta.</p>
+    <p xml:lang="ru">Natter не связан с WhatsApp или Meta.</p>
   </description>
 
   <launchable type="desktop-id">io.github.quezka.Natter.desktop</launchable>
@@ -24,6 +30,7 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.4.0" date="2026-09-29"/>
     <release version="0.3.2" date="2026-09-27"/>
     <release version="0.3.1" date="2026-09-25"/>
     <release version="0.3.0" date="2026-09-25"/>

@@ -8,7 +8,7 @@ GNOME without the extension), the icon simply doesn't appear.
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable
 
 import gi
@@ -110,15 +110,29 @@ class MenuItem:
     on_click: Callable[[], None] | None = None
     separator: bool = False
     checked: bool | None = None  # None: not a checkbox
+    radio: bool = False  # shown as a radio button rather than a checkmark
+    children: list[MenuItem] = field(default_factory=list)  # non-empty: a submenu
 
     def properties(self) -> dict[str, GLib.Variant]:
         if self.separator:
             return {"type": GLib.Variant("s", "separator")}
         props = {"label": GLib.Variant("s", self.label), "enabled": GLib.Variant("b", True)}
         if self.checked is not None:
-            props["toggle-type"] = GLib.Variant("s", "checkmark")
+            props["toggle-type"] = GLib.Variant("s", "radio" if self.radio else "checkmark")
             props["toggle-state"] = GLib.Variant("i", int(self.checked))
+        if self.children:
+            props["children-display"] = GLib.Variant("s", "submenu")
         return props
+
+    def layout(self) -> tuple:
+        """This item as dbusmenu's (ia{sv}av), with its submenu."""
+        return (self.id, self.properties(),
+                [GLib.Variant("(ia{sv}av)", child.layout()) for child in self.children])
+
+
+def all_items(items: list[MenuItem]) -> list[MenuItem]:
+    """The items and, depth first, everything in their submenus."""
+    return [found for item in items for found in (item, *all_items(item.children))]
 
 
 def _later(callback: Callable[[], object]) -> None:
@@ -195,6 +209,15 @@ class Tray:
         for signal in ("NewIcon", "NewToolTip", "NewTitle"):
             self._emit(ITEM_PATH, "org.kde.StatusNotifierItem", signal, None)
 
+    def set_items(self, items: list[MenuItem]) -> None:
+        """Replace the whole menu, e.g. after the language changed; the tooltip follows too."""
+        self.items = items
+        self.revision += 1
+        self._emit(MENU_PATH, "com.canonical.dbusmenu", "LayoutUpdated",
+                   GLib.Variant("(ui)", (self.revision, 0)))
+        for signal in ("NewToolTip", "NewTitle"):
+            self._emit(ITEM_PATH, "org.kde.StatusNotifierItem", signal, None)
+
     def set_checked(self, item_id: int, checked: bool) -> None:
         item = self._item(item_id)
         if item is None or item.checked is None:
@@ -260,10 +283,13 @@ class Tray:
         if method in ("Activate", "SecondaryActivate"):
             _later(self.on_activate)
         elif method == "GetLayout":
-            reply = GLib.Variant("(u(ia{sv}av))", (self.revision, self._layout()))
+            parent = params.unpack()[0]  # hosts ask for a submenu by its id
+            item = self._item(parent)
+            layout = item.layout() if parent and item else self._layout()
+            reply = GLib.Variant("(u(ia{sv}av))", (self.revision, layout))
         elif method == "GetGroupProperties":
             ids = params.unpack()[0]
-            found = [(i.id, i.properties()) for i in self.items if not ids or i.id in ids]
+            found = [(i.id, i.properties()) for i in all_items(self.items) if not ids or i.id in ids]
             if not ids or 0 in ids:
                 found.insert(0, (0, self._root_properties()))
             reply = GLib.Variant("(a(ia{sv}))", (found,))
@@ -301,12 +327,12 @@ class Tray:
         return True
 
     def _item(self, item_id: int) -> MenuItem | None:
-        return next((i for i in self.items if i.id == item_id), None)
+        return next((i for i in all_items(self.items) if i.id == item_id), None)
 
     @staticmethod
     def _root_properties() -> dict[str, GLib.Variant]:
         return {"children-display": GLib.Variant("s", "submenu")}
 
     def _layout(self):
-        children = [GLib.Variant("(ia{sv}av)", (i.id, i.properties(), [])) for i in self.items]
-        return (0, self._root_properties(), children)
+        return (0, self._root_properties(),
+                [GLib.Variant("(ia{sv}av)", i.layout()) for i in self.items])

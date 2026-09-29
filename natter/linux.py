@@ -10,12 +10,14 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("WebKit2", "4.1")
 from gi.repository import Gio, GLib, Gtk, WebKit2  # noqa: E402
 
-from natter import autostart, config  # noqa: E402
+from natter import autostart, config, i18n  # noqa: E402
+from natter.i18n import _  # noqa: E402
 from natter.state import Preferences, WindowState  # noqa: E402
 
 ASSETS = Path(__file__).resolve().parent / "assets"
 ZOOM_STEP = 0.1
-MENU_SHOW, MENU_START_ON_LOGIN, MENU_QUIT = 1, 3, 5
+MENU_SHOW, MENU_START_ON_LOGIN, MENU_QUIT, MENU_LANGUAGE = 1, 3, 5, 6
+MENU_FIRST_LANGUAGE = 10  # one radio item per i18n.LANGUAGES entry from here
 
 # Only the things WhatsApp Web actually asks for: notifications, the microphone for
 # voice notes, the camera for photos, and the clipboard for pasting images.
@@ -96,17 +98,36 @@ class NatterApp(Gtk.Application):
         try:
             from natter.tray_linux import MenuItem, Tray
             svg = (ASSETS / "icon.svg").read_text(encoding="utf-8")
-            self.tray = Tray(svg, self._toggle, [
-                MenuItem(MENU_SHOW, f"Open {config.APP_NAME}", self._show),
-                MenuItem(2, separator=True),
-                MenuItem(MENU_START_ON_LOGIN, "Start on login", self._toggle_start_on_login,
-                         checked=self.prefs.start_on_login),
-                MenuItem(4, separator=True),
-                MenuItem(MENU_QUIT, f"Quit {config.APP_NAME}", self._quit),
-            ])
+            self.tray = Tray(svg, self._toggle, self._menu())
             self.tray.start()
         except (GLib.Error, OSError, ValueError):
             self.tray = None  # no tray: closing still hides, and relaunching shows
+
+    def _menu(self) -> list:
+        from natter.tray_linux import MenuItem
+        languages = [
+            MenuItem(MENU_FIRST_LANGUAGE + n, _(name) if code == "" else name,
+                     lambda code=code: self._set_language(code),
+                     checked=code == self.prefs.language, radio=True)
+            for n, (code, name) in enumerate(i18n.LANGUAGES)
+        ]
+        return [
+            MenuItem(MENU_SHOW, _("Open {app}").format(app=config.APP_NAME), self._show),
+            MenuItem(2, separator=True),
+            MenuItem(MENU_START_ON_LOGIN, _("Start on login"), self._toggle_start_on_login,
+                     checked=self.prefs.start_on_login),
+            MenuItem(MENU_LANGUAGE, _("Language"), children=languages),
+            MenuItem(4, separator=True),
+            MenuItem(MENU_QUIT, _("Quit {app}").format(app=config.APP_NAME), self._quit),
+        ]
+
+    def _set_language(self, code: str) -> None:
+        self.prefs.language = code
+        self._save_prefs()
+        i18n.install(code)
+        autostart.set_enabled(self.prefs.start_on_login)  # rewrites the entry's comment
+        if self.tray is not None:
+            self.tray.set_items(self._menu())
 
     def _toggle_start_on_login(self) -> None:
         self.prefs.start_on_login = not self.prefs.start_on_login

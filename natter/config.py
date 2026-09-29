@@ -8,6 +8,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from natter import APP_ID, APP_NAME  # noqa: F401 (re-exported for the backends)
+from natter.i18n import _, plural
 
 URL = "https://web.whatsapp.com/"
 
@@ -47,7 +48,7 @@ def window_title(unread: int) -> str:
 def tray_tooltip(unread: int) -> str:
     if not unread:
         return APP_NAME
-    return f"{APP_NAME}: {unread} unread chat" + ("" if unread == 1 else "s")
+    return _("{app}: {chats}").format(app=APP_NAME, chats=plural(unread, "unread chat"))
 
 
 def badged_svg(svg: str) -> str:

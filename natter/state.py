@@ -1,4 +1,4 @@
-"""Window geometry, zoom and preferences, remembered between runs."""
+"""Window geometry, zoom and preferences (start on login, language), remembered between runs."""
 from __future__ import annotations
 
 import json
@@ -19,6 +19,9 @@ def _load(cls, path: Path):
         value, default = raw.get(field.name), getattr(state, field.name)
         if isinstance(default, bool):
             if isinstance(value, bool):
+                setattr(state, field.name, value)
+        elif isinstance(default, str):
+            if isinstance(value, str):
                 setattr(state, field.name, value)
         elif isinstance(value, (int, float)) and not isinstance(value, bool):
             setattr(state, field.name, type(default)(value))
@@ -53,6 +56,7 @@ class WindowState:
 class Preferences:
     # On by default, like Discord: Natter starts hidden in the tray when you log in.
     start_on_login: bool = True
+    language: str = ""  # "" follows the system; otherwise a code from i18n.LANGUAGES
 
     @classmethod
     def load(cls, path: Path) -> "Preferences":

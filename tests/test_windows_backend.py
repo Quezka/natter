@@ -16,10 +16,11 @@ def test_badge_draws_a_red_dot_top_right_and_keeps_the_original():
 
 @pytest.mark.skipif("sys.platform != 'win32'")
 def test_tray_builds_its_menu_on_windows():
-    tray = windows._Tray(lambda: None, lambda: None, lambda: None, lambda: True)
+    tray = windows._Tray(lambda: None, lambda: None, lambda: None, lambda: True,
+                         lambda _code: None, lambda: "")
     import pystray
 
     labels = [item.text for item in tray.icon.menu.items if item is not pystray.Menu.SEPARATOR]
-    assert labels == ["Open Natter", "Start on login", "Quit Natter"]
+    assert labels == ["Open Natter", "Start on login", "Language", "Quit Natter"]
     tray.set_unread(3)
     assert tray.icon.title == "Natter: 3 unread chats"
