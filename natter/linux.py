@@ -6,13 +6,14 @@ from pathlib import Path
 
 import gi
 
+gi.require_version("Gdk", "3.0")
 gi.require_version("Gtk", "3.0")
 gi.require_version("WebKit2", "4.1")
-from gi.repository import Gio, GLib, Gtk, WebKit2  # noqa: E402
+from gi.repository import Gdk, Gio, GLib, Gtk, WebKit2  # noqa: E402
 
 from natter import autostart, config, i18n  # noqa: E402
 from natter.i18n import _  # noqa: E402
-from natter.state import Preferences, WindowState  # noqa: E402
+from natter.state import Preferences, WindowState, fit_size, starting_zoom  # noqa: E402
 
 ASSETS = Path(__file__).resolve().parent / "assets"
 ZOOM_STEP = 0.1
@@ -179,7 +180,8 @@ class NatterApp(Gtk.Application):
         if settings.find_property("enable-webrtc"):
             settings.set_property("enable-webrtc", True)
 
-        view.set_zoom_level(self.state.zoom)
+        area = self._work_area()
+        view.set_zoom_level(starting_zoom(self.state, area[1] if area else None))
         view.connect("decide-policy", self._on_decide_policy)
         view.connect("permission-request", self._on_permission_request)
         view.connect("show-notification", self._on_show_notification)
@@ -188,7 +190,8 @@ class NatterApp(Gtk.Application):
         view.connect("create", lambda *_: None)  # never open extra app windows
 
         window = Gtk.ApplicationWindow(application=self, title=config.APP_NAME)
-        window.set_default_size(self.state.width, self.state.height)
+        window.set_default_size(*(fit_size(self.state.width, self.state.height, *area) if area
+                                  else (self.state.width, self.state.height)))
         if self.state.maximized:
             window.maximize()
         if not Gtk.IconTheme.get_default().has_icon(config.APP_ID):
@@ -200,6 +203,17 @@ class NatterApp(Gtk.Application):
 
         self.window, self.view = window, view
         view.load_uri(config.URL)
+
+    @staticmethod
+    def _work_area() -> tuple[int, int] | None:
+        """The free size of the main screen, if GTK can tell."""
+        try:
+            display = Gdk.Display.get_default()
+            monitor = display.get_primary_monitor() or display.get_monitor(0)
+            area = monitor.get_workarea()
+            return area.width, area.height
+        except Exception:  # no display information: leave the saved size alone
+            return None
 
     def _on_delete(self, _window, _event) -> bool:
         # Closing keeps WhatsApp running in the tray so notifications still arrive, like
@@ -220,6 +234,7 @@ class NatterApp(Gtk.Application):
             pass
 
     def _zoom(self, step: float | None) -> None:
+        self.state.zoom_chosen = True  # from now on the zoom is yours, whatever the screen
         level = 1.0 if step is None else self.view.get_zoom_level() + step
         self.view.set_zoom_level(min(max(round(level, 2), 0.5), 3.0))
 

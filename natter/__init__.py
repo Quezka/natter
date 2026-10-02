@@ -3,7 +3,7 @@
 Release metadata below is the single source for packaging (the .deb, AppStream
 metainfo checks, Windows file properties).
 """
-__version__ = "0.4.1"
+__version__ = "0.5.0"
 
 APP_NAME = "Natter"
 APP_ID = "io.github.quezka.Natter"  # reverse-DNS id used by desktop files and AppStream

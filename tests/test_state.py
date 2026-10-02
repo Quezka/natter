@@ -48,3 +48,19 @@ def test_preferences_remember_the_language(tmp_path):
     assert Preferences.load(path).language == "ru"
     path.write_text('{"language": 7}')
     assert Preferences.load(path).language == ""
+
+
+def test_window_sizes_fit_the_screen():
+    from natter.state import fit_size
+    assert fit_size(1100, 760, 1366, 728) == (1100, 688)
+    assert fit_size(1100, 760, 1920, 1040) == (1100, 760)
+    assert fit_size(1100, 760, 300, 200) == (480, 400)  # never below the minimum
+
+
+def test_small_screens_start_zoomed_out_until_you_zoom():
+    from natter.state import starting_zoom
+    assert starting_zoom(WindowState(), 768) == 0.85
+    assert starting_zoom(WindowState(), 1080) == 1.0
+    assert starting_zoom(WindowState(), None) == 1.0
+    assert starting_zoom(WindowState(zoom=1.2, zoom_chosen=True), 768) == 1.2
+    assert starting_zoom(WindowState(zoom=1.0, zoom_chosen=True), 768) == 1.0

@@ -4,6 +4,11 @@ All notable changes to Natter. Versions follow [Semantic Versioning](https://sem
 patch for fixes, minor for new features, major for breaking changes (while below 1.0,
 breaking changes bump the minor version).
 
+## [0.5.0] - 2026-10-02
+
+### Added
+- Small screens: the window never opens bigger than the screen, and on a screen up to 800 pixels tall (like 1366x768) WhatsApp starts a little zoomed out (85%). Zoom as you like with Ctrl+plus, Ctrl+minus and Ctrl+0; once you do, your choice is kept.
+
 ## [0.4.1] - 2026-09-29
 
 ### Fixed

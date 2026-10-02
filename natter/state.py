@@ -39,6 +39,7 @@ class WindowState:
     height: int = 760
     maximized: bool = False
     zoom: float = 1.0
+    zoom_chosen: bool = False  # until you zoom yourself, small screens get a smaller default
 
     @classmethod
     def load(cls, path: Path) -> "WindowState":
@@ -50,6 +51,24 @@ class WindowState:
 
     def save(self, path: Path) -> None:
         _save(self, path)
+
+
+SMALL_SCREEN = 800  # screens up to this tall (like 1366x768) start a little zoomed out
+SMALL_SCREEN_ZOOM = 0.85
+SCREEN_MARGIN = 40  # room for the title bar and panels
+
+
+def fit_size(width: int, height: int, area_width: int, area_height: int) -> tuple[int, int]:
+    """A window size that fits in the free part of the screen."""
+    return (min(width, max(area_width - SCREEN_MARGIN, 480)),
+            min(height, max(area_height - SCREEN_MARGIN, 400)))
+
+
+def starting_zoom(state: "WindowState", screen_height: int | None) -> float:
+    """What you chose, or on a small screen a little smaller than usual."""
+    if state.zoom_chosen or not screen_height:
+        return state.zoom
+    return SMALL_SCREEN_ZOOM if screen_height <= SMALL_SCREEN else state.zoom
 
 
 @dataclass

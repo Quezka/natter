@@ -8,7 +8,7 @@ import webview
 
 from natter import autostart, config, i18n, single_instance
 from natter.i18n import _
-from natter.state import Preferences, WindowState
+from natter.state import Preferences, WindowState, fit_size
 
 ASSETS = Path(__file__).resolve().parent / "assets"
 
@@ -30,11 +30,17 @@ def run(debug: bool, background: bool) -> int:
     webview.settings["ALLOW_DOWNLOADS"] = True
     webview.settings["OPEN_EXTERNAL_LINKS_IN_BROWSER"] = True
 
+    width, height = state.width, state.height
+    try:  # keep the window inside the main screen (a laptop at 1366x768 is small)
+        screen = webview.screens[0]
+        width, height = fit_size(width, height, screen.width, screen.height)
+    except Exception:  # no screen information: use the saved size
+        pass
     window = webview.create_window(
         config.APP_NAME,
         config.URL,
-        width=state.width,
-        height=state.height,
+        width=width,
+        height=height,
         maximized=state.maximized,
         min_size=(480, 400),
         text_select=True,
