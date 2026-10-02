@@ -21,3 +21,4 @@ the distro's PyGObject (`natter/linux.py`). Windows: pywebview + WebView2 (`natt
 - Release (automatic after each change): bump `__version__`, add a CHANGELOG section and a
   `<release>` at the top of the metainfo (`tests/test_packaging.py` checks both), then push
   tag `vX.Y.Z` on its own (GitHub starts no tag workflows when one push carries >3 tags).
+- Updates (`natter/updates.py`, platform-independent: feed, installers, `Updater` rules; dialogs in `updates_gtk.py` and `updates_win.py`). The repo must be public for GitHub's API to answer. Asset names must stay `natter_<v>_all.deb` and `Natter-<v>-windows-x64-setup.exe`. Choices live in `Preferences` (`auto_update_check`, `update_last_check`, `update_skipped`). Tests use fakes, never GitHub.

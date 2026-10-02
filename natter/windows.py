@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import threading
+import webbrowser
 from pathlib import Path
 
 import webview
@@ -9,6 +10,8 @@ import webview
 from natter import autostart, config, i18n, single_instance
 from natter.i18n import _
 from natter.state import Preferences, WindowState, fit_size
+from natter.updates import default_updater
+from natter.updates_win import WindowsUpdateUI
 
 ASSETS = Path(__file__).resolve().parent / "assets"
 
@@ -71,8 +74,16 @@ def run(debug: bool, background: bool) -> int:
         autostart.set_enabled(prefs.start_on_login)
         tray.relabel()
 
+    updater = default_updater(prefs, lambda: _save(prefs, prefs_path))
+    update_ui = WindowsUpdateUI(updater, webbrowser.open, quit_app)
+
+    def toggle_auto_update() -> None:
+        updater.set_auto_check(not updater.auto_check())
+
     tray = _Tray(show, quit_app, toggle_start_on_login, lambda: prefs.start_on_login,
-                 set_language, lambda: prefs.language)
+                 set_language, lambda: prefs.language,
+                 lambda: update_ui.check(interactive=True), toggle_auto_update,
+                 updater.auto_check)
     holder["show"] = show
     tuned = False
 
@@ -94,6 +105,7 @@ def run(debug: bool, background: bool) -> int:
     window.events.loaded += on_loaded
     window.events.closing += on_closing
     tray.start()
+    update_ui.start()
     webview.start(
         gui="edgechromium",
         debug=debug,
@@ -118,7 +130,8 @@ class _Tray:
     """
 
     def __init__(self, on_open, on_quit, on_toggle_login, login_checked, on_language,
-                 chosen_language) -> None:
+                 chosen_language, on_check_updates=lambda: None, on_toggle_auto=lambda: None,
+                 auto_checked=lambda: True) -> None:
         import pystray
         from PIL import Image
 
@@ -142,6 +155,11 @@ class _Tray:
             pystray.MenuItem(lambda _item: _("Start on login"), lambda: on_toggle_login(),
                              checked=lambda _item: login_checked()),
             pystray.MenuItem(lambda _item: _("Language"), languages),
+            pystray.MenuItem(lambda _item: _("Check for updates…"),
+                             lambda: on_check_updates()),
+            pystray.MenuItem(lambda _item: _("Check for updates automatically"),
+                             lambda: on_toggle_auto(),
+                             checked=lambda _item: auto_checked()),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem(lambda _item: _("Quit {app}").format(app=config.APP_NAME),
                              lambda: on_quit()),

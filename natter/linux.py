@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import subprocess
 from pathlib import Path
 
 import gi
@@ -14,10 +15,13 @@ from gi.repository import Gdk, Gio, GLib, Gtk, WebKit2  # noqa: E402
 from natter import autostart, config, i18n  # noqa: E402
 from natter.i18n import _  # noqa: E402
 from natter.state import Preferences, WindowState, fit_size, starting_zoom  # noqa: E402
+from natter.updates import default_updater  # noqa: E402
+from natter.updates_gtk import UpdateUI  # noqa: E402
 
 ASSETS = Path(__file__).resolve().parent / "assets"
 ZOOM_STEP = 0.1
 MENU_SHOW, MENU_START_ON_LOGIN, MENU_QUIT, MENU_LANGUAGE = 1, 3, 5, 6
+MENU_CHECK_UPDATES, MENU_AUTO_UPDATE = 7, 8
 MENU_FIRST_LANGUAGE = 10  # one radio item per i18n.LANGUAGES entry from here
 
 # Only the things WhatsApp Web actually asks for: notifications, the microphone for
@@ -41,6 +45,9 @@ class NatterApp(Gtk.Application):
         self.state = WindowState.load(self.state_path)
         self.prefs_path = config.data_dir() / "preferences.json"
         self.prefs = Preferences.load(self.prefs_path)
+        self.updater = default_updater(self.prefs, self._save_prefs)
+        self.update_ui = UpdateUI(self.updater, lambda: self.window, self._restart_after_update,
+                                  lambda url: Gtk.show_uri_on_window(None, url, Gdk.CURRENT_TIME))
 
     # --- application lifecycle -------------------------------------------------
 
@@ -57,6 +64,7 @@ class NatterApp(Gtk.Application):
             self._save_prefs()
         autostart.set_enabled(self.prefs.start_on_login)  # also refreshes a moved launcher
         self._start_tray()
+        self.update_ui.start()
 
     def do_activate(self) -> None:
         # A second launch lands here in the running instance, which brings the
@@ -118,6 +126,10 @@ class NatterApp(Gtk.Application):
             MenuItem(MENU_START_ON_LOGIN, _("Start on login"), self._toggle_start_on_login,
                      checked=self.prefs.start_on_login),
             MenuItem(MENU_LANGUAGE, _("Language"), children=languages),
+            MenuItem(MENU_CHECK_UPDATES, _("Check for updates…"),
+                     lambda: self.update_ui.check(interactive=True)),
+            MenuItem(MENU_AUTO_UPDATE, _("Check for updates automatically"),
+                     self._toggle_auto_update, checked=self.updater.auto_check()),
             MenuItem(4, separator=True),
             MenuItem(MENU_QUIT, _("Quit {app}").format(app=config.APP_NAME), self._quit),
         ]
@@ -136,6 +148,21 @@ class NatterApp(Gtk.Application):
         autostart.set_enabled(self.prefs.start_on_login)
         if self.tray is not None:
             self.tray.set_checked(MENU_START_ON_LOGIN, self.prefs.start_on_login)
+
+    def _toggle_auto_update(self) -> None:
+        self.updater.set_auto_check(not self.updater.auto_check())
+        if self.tray is not None:
+            self.tray.set_checked(MENU_AUTO_UPDATE, self.updater.auto_check())
+
+    def _restart_after_update(self) -> None:
+        """The new version is installed: start it as soon as this copy has quit (a second
+        launch would otherwise just be handed to this one)."""
+        try:
+            subprocess.Popen(["sh", "-c", "sleep 1; exec natter"], start_new_session=True,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except OSError:
+            pass  # it'll start the next time the user opens Natter
+        self._quit()
 
     def _save_prefs(self) -> None:
         try:

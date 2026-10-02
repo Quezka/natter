@@ -4,6 +4,12 @@ All notable changes to Natter. Versions follow [Semantic Versioning](https://sem
 patch for fixes, minor for new features, major for breaking changes (while below 1.0,
 breaking changes bump the minor version).
 
+## [0.6.0] - 2026-10-02
+
+### Added
+- **Updates from inside Natter.** About once a day (and whenever you choose "Check for updates…" in the tray menu) Natter looks for a new release on GitHub. When there is one you see what's new and can update now, wait, or skip that version. On Linux the new `.deb` is installed with the system's own password prompt and Natter restarts; on Windows the new setup runs silently and Natter comes back. A copy run from source just opens the download page. Turn the automatic check off in the tray menu ("Check for updates automatically").
+- Russian translation of all of it.
+
 ## [0.5.0] - 2026-10-02
 
 ### Added

@@ -76,6 +76,9 @@ class Preferences:
     # On by default, like Discord: Natter starts hidden in the tray when you log in.
     start_on_login: bool = True
     language: str = ""  # "" follows the system; otherwise a code from i18n.LANGUAGES
+    auto_update_check: bool = True  # look for a new version about once a day
+    update_last_check: str = ""
+    update_skipped: str = ""  # a version the user said "skip this version" to
 
     @classmethod
     def load(cls, path: Path) -> "Preferences":

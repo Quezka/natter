@@ -21,6 +21,7 @@ def test_tray_builds_its_menu_on_windows():
     import pystray
 
     labels = [item.text for item in tray.icon.menu.items if item is not pystray.Menu.SEPARATOR]
-    assert labels == ["Open Natter", "Start on login", "Language", "Quit Natter"]
+    assert labels == ["Open Natter", "Start on login", "Language", "Check for updates…",
+                      "Check for updates automatically", "Quit Natter"]
     tray.set_unread(3)
     assert tray.icon.title == "Natter: 3 unread chats"
