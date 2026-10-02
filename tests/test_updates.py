@@ -1,6 +1,7 @@
 import hashlib
 import io
 import json
+import os
 import urllib.error
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -197,7 +198,7 @@ def test_deb_installer_only_for_the_packaged_copy_and_picks_the_all_package(tmp_
     deb = DebInstaller("/usr/lib/natter/natter", lambda cmd, **kw: calls.append(cmd) or Done())
     assert deb.pick((EXE, DEB)) == DEB and deb.pick((EXE,)) is None
     assert deb.install("/tmp/x.deb") is False
-    assert calls[0][:3] == ["pkexec", "apt-get", "install"] and calls[0][-1] == "/tmp/x.deb"
+    assert calls[0][:3] == ["pkexec", "apt-get", "install"] and calls[0][-1] == os.path.abspath("/tmp/x.deb")
     assert not DebInstaller(str(tmp_path)).supported()  # running from source
 
 
