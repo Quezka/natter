@@ -4,6 +4,11 @@ All notable changes to Natter. Versions follow [Semantic Versioning](https://sem
 patch for fixes, minor for new features, major for breaking changes (while below 1.0,
 breaking changes bump the minor version).
 
+## [0.7.0] - 2026-10-05
+
+### Added
+- Italian translation (Language in the tray menu; Italian systems start in Italian).
+
 ## [0.6.0] - 2026-10-02
 
 ### Added

@@ -1,4 +1,4 @@
-"""Every on-screen text needs a Russian translation, with the same placeholders."""
+"""Every on-screen text needs a Russian and an Italian translation, with the same placeholders."""
 import ast
 import string
 from pathlib import Path
@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from natter import config, i18n
-from natter.locales import ru
+from natter.locales import it, ru
 
 ROOT = Path(__file__).resolve().parent.parent / "natter"
 
@@ -37,20 +37,26 @@ def placeholders(text: str) -> set[str]:
     return {name for _, name, _, _ in string.Formatter().parse(text) if name}
 
 
-def test_every_ui_string_is_translated():
+CATALOGUES = [pytest.param(ru, 3, id="ru"), pytest.param(it, 2, id="it")]
+
+
+@pytest.mark.parametrize("catalogue, forms", CATALOGUES)
+def test_every_ui_string_is_translated(catalogue, forms):
     ui = calls("_") | {name for code, name in i18n.LANGUAGES if code == ""}
-    missing = sorted(ui - ru.MESSAGES.keys())
-    assert not missing, "Missing Russian for:\n" + "\n".join(missing)
+    missing = sorted(ui - catalogue.MESSAGES.keys())
+    assert not missing, "Missing translation for:\n" + "\n".join(missing)
 
 
-def test_every_plural_word_has_three_forms():
-    missing = sorted(calls("plural", 1) - ru.PLURALS.keys())
-    assert not missing, "Missing Russian plural forms for: " + ", ".join(missing)
-    assert all(len(forms) == 3 for forms in ru.PLURALS.values())
+@pytest.mark.parametrize("catalogue, forms", CATALOGUES)
+def test_every_plural_word_has_its_forms(catalogue, forms):
+    missing = sorted(calls("plural", 1) - catalogue.PLURALS.keys())
+    assert not missing, "Missing plural forms for: " + ", ".join(missing)
+    assert all(len(f) == forms for f in catalogue.PLURALS.values())
 
 
-def test_translations_keep_their_placeholders():
-    wrong = [k for k, v in ru.MESSAGES.items() if placeholders(k) != placeholders(v)]
+@pytest.mark.parametrize("catalogue, forms", CATALOGUES)
+def test_translations_keep_their_placeholders(catalogue, forms):
+    wrong = [k for k, v in catalogue.MESSAGES.items() if placeholders(k) != placeholders(v)]
     assert not wrong, "Placeholders differ in: " + "; ".join(wrong)
 
 
@@ -62,6 +68,7 @@ def test_russian_plural_rule(n, form):
 
 @pytest.mark.parametrize("env, expected", [
     ({"LANG": "ru_RU.UTF-8"}, "ru"),
+    ({"LANG": "it_IT.UTF-8"}, "it"),
     ({"LANGUAGE": "ru_RU:en", "LANG": "en_GB.UTF-8"}, "ru"),
     ({"LANGUAGE": "", "LANG": "en_GB.UTF-8"}, "en"),
     ({"LC_ALL": "C.UTF-8", "LANG": "ru_RU.UTF-8"}, "ru"),
@@ -92,3 +99,16 @@ def test_tray_tooltip_in_russian():
     assert config.tray_tooltip(3) == "Natter: 3 непрочитанных чата"
     assert config.tray_tooltip(11) == "Natter: 11 непрочитанных чатов"
     assert i18n._("Start on login") == "Запускать при входе в систему"
+
+
+def test_tray_tooltip_in_italian():
+    i18n.install("it")
+    assert config.tray_tooltip(0) == "Natter"
+    assert config.tray_tooltip(1) == "Natter: 1 chat non letta"
+    assert config.tray_tooltip(3) == "Natter: 3 chat non lette"
+    assert i18n._("Start on login") == "Avvia all’accesso"
+
+
+def test_italian_system_gets_italian(monkeypatch):
+    monkeypatch.setattr(i18n, "system_language", lambda: "it")
+    assert i18n.install("") == "it"

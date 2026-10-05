@@ -24,7 +24,7 @@ Natter is not affiliated with WhatsApp or Meta.
   - closing the window hides it to the tray (quit from the tray menu, or Ctrl+Q on Linux);
   - starts hidden in the tray when you log in (untick "Start on login" in the tray menu);
   - launching it again brings the running window back instead of opening a second copy.
-- English or Russian (Language in the tray menu; follows the system by default)
+- English, Italian or Russian (Language in the tray menu; follows the system by default)
 - Linux tray: KDE, Ubuntu (AppIndicator extension), Cinnamon, XFCE, waybar… On plain GNOME
   without a tray extension there's no icon; launch Natter again to bring the window back.
 
@@ -59,7 +59,7 @@ with both packages and the matching `CHANGELOG.md` section as notes.
 
 - `natter/config.py`: URLs, user agent, link policy, paths (pure, tested)
 - `natter/state.py`: remembered window state and preferences (pure, tested)
-- `natter/i18n.py`, `natter/locales/ru.py`: translations; wrap on-screen text in `_()` (tested)
+- `natter/i18n.py`, `natter/locales/ru.py`: translations (Russian and Italian); wrap on-screen text in `_()` (tested)
 - `natter/autostart.py`: start on login (XDG autostart entry / Windows Run key)
 - `natter/tray_linux.py`: tray icon over D-Bus (StatusNotifierItem + dbusmenu), no extra libraries
 - `natter/single_instance.py`: one copy per user on Windows (Linux uses GApplication)

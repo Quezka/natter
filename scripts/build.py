@@ -127,6 +127,7 @@ def build_exe(onefile: bool = True) -> Path:
         "--icon", str(windows_icon()),
         "--version-file", str(write_windows_version_file()),
         "--hidden-import", "pystray._win32",  # pystray picks its backend at runtime
+        "--collect-submodules", "natter.locales",  # i18n imports the catalogue by name
         "--add-data", f"{ASSETS}{';' if sys.platform == 'win32' else ':'}natter/assets",
         "--distpath", str(DIST),
         "--workpath", str(BUILD / "pyinstaller"),

@@ -3,19 +3,20 @@
 Wrap on-screen text in `_()`; it returns the text in the chosen language, or the
 English original when there's no translation. Text with values in it uses named
 placeholders: `_("Open {app}").format(app=...)`. Tests check every `_()` string has
-a Russian translation.
+a Russian and an Italian translation.
 
 WhatsApp Web itself isn't translated here: it follows the system language and has its
 own language setting.
 """
 from __future__ import annotations
 
+import importlib
 import os
 import sys
 
 # (code, name in its own language). "" follows the system.
-LANGUAGES = [("", "System"), ("en", "English"), ("ru", "Русский")]
-SUPPORTED = {"en", "ru"}
+LANGUAGES = [("", "System"), ("en", "English"), ("it", "Italiano"), ("ru", "Русский")]
+SUPPORTED = {"en", "it", "ru"}
 
 _language = "en"
 _messages: dict[str, str] = {}
@@ -27,7 +28,7 @@ def system_language() -> str:
     if sys.platform == "win32":
         import ctypes
         lang_id = ctypes.windll.kernel32.GetUserDefaultUILanguage() & 0x3FF
-        return "ru" if lang_id == 0x19 else "en"
+        return {0x19: "ru", 0x10: "it"}.get(lang_id, "en")
     for var in ("LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG"):
         value = os.environ.get(var, "").split(":")[0]
         if value and value not in ("C", "POSIX") and not value.startswith("C."):
@@ -36,21 +37,22 @@ def system_language() -> str:
 
 
 def resolve(code: str) -> str:
-    """What "" (system) means here: Russian systems get Russian, the rest English."""
+    """What "" (system) means here: Italian and Russian systems get their language, the rest English."""
     if code in SUPPORTED:
         return code
-    return "ru" if system_language() == "ru" else "en"
+    system = system_language()
+    return system if system in SUPPORTED else "en"
 
 
 def install(code: str) -> str:
-    """Activate a language ("", "en" or "ru") and return the one now in use."""
+    """Activate a language ("", "en", "it" or "ru") and return the one now in use."""
     global _language, _messages, _plurals
     _language = resolve(code)
     if _language == "en":
         _messages, _plurals = {}, {}
     else:
-        from natter.locales import ru
-        _messages, _plurals = ru.MESSAGES, ru.PLURALS
+        module = importlib.import_module(f"natter.locales.{_language}")
+        _messages, _plurals = module.MESSAGES, module.PLURALS
     return _language
 
 
@@ -72,8 +74,13 @@ def plural_form(n: int) -> int:
     return 2
 
 
+def _form(n: int) -> int:
+    """Which plural form the active language uses: Italian has two, Russian three."""
+    return (0 if n == 1 else 1) if _language == "it" else plural_form(n)
+
+
 def plural(n: int, word: str) -> str:
-    """"3 unread chats" / "3 непрочитанных чата". `word` is the English singular."""
+    """"3 unread chats" / "3 chat non letti" / "3 непрочитанных чата". `word` is the English singular."""
     if word in _plurals:
-        return f"{n} {_plurals[word][plural_form(n)]}"
+        return f"{n} {_plurals[word][_form(n)]}"
     return f"{n} {word}{'' if n == 1 else 's'}"
