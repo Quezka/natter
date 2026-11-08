@@ -50,6 +50,9 @@ def test_do_not_disturb_is_in_the_tray_and_ticks():
 
 
 def test_the_settings_window_builds():
+    from gi.repository import Gtk
+    if not Gtk.init_check()[0]:
+        pytest.skip("no display (CI)")
     from natter.settings_gtk import Actions, SettingsWindow
     from natter.state import Preferences
     actions = Actions(changed=lambda: None, language=lambda c: None, start_on_login=lambda on: None,

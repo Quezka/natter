@@ -30,6 +30,11 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.8.2" date="2026-11-08">
+      <description>
+        <p>the tray menu updates at once after changes</p>
+      </description>
+    </release>
     <release version="0.8.1" date="2026-11-08">
       <description>
         <p>the tray menu updates at once after changes</p>
