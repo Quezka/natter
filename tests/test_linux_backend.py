@@ -32,3 +32,28 @@ def test_the_update_dialogs_module_builds_without_a_window():
     assert ui._window() is None
     assert _message(UpdateError("plain")) == "plain"
     assert "boom" in _message(RuntimeError("boom"))
+
+
+def test_do_not_disturb_is_in_the_tray_and_ticks():
+    app = linux.NatterApp(debug=False, background=False)
+    app._save_prefs = lambda: None  # never touch the user's real preferences
+
+    class Tray:
+        items = None
+        def set_items(self, items):
+            self.items = items
+    app.tray = Tray()
+    app._toggle_dnd()
+    items = {item.id: item for item in app.tray.items}
+    assert items[linux.MENU_DND].checked is True and app.prefs.do_not_disturb
+    assert linux.MENU_SETTINGS in items
+
+
+def test_the_settings_window_builds():
+    from natter.settings_gtk import Actions, SettingsWindow
+    from natter.state import Preferences
+    actions = Actions(changed=lambda: None, language=lambda c: None, start_on_login=lambda on: None,
+                      check_updates=lambda: None, shortcut=lambda on: True, shortcut_possible=True)
+    window = SettingsWindow(None, Preferences(), actions, True, lambda on: None)
+    window.show_all()
+    window.destroy()

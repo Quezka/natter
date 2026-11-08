@@ -4,6 +4,11 @@ All notable changes to Natter. Versions follow [Semantic Versioning](https://sem
 patch for fixes, minor for new features, major for breaking changes (while below 1.0,
 breaking changes bump the minor version).
 
+## [0.8.1] - 2026-11-08
+
+### Fixed
+- The tray menu's Do Not Disturb tick (and the menu after any change in Settings) updates at once, not after a restart.
+
 ## [0.8.0] - 2026-11-08
 
 ### Added

@@ -154,8 +154,8 @@ class NatterApp(Gtk.Application):
         self._refresh_tray()
 
     def _refresh_tray(self) -> None:
-        if self.tray is not None and hasattr(self.tray, "set_menu"):
-            self.tray.set_menu(self._menu())
+        if self.tray is not None:
+            self.tray.set_items(self._menu())
 
     def _open_settings(self) -> None:
         from natter.settings_gtk import Actions, SettingsWindow
