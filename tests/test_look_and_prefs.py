@@ -3,10 +3,10 @@ from natter import look
 from natter.state import Preferences
 
 
-def test_css_has_the_glass_wash_and_frosted_cards():
+def test_css_is_plain_with_no_gradient_wash():
     for dark in (False, True):
         sheet = look.css(dark)
-        assert "linear-gradient" in sheet and "rgba(" in sheet and ".card" in sheet
+        assert "gradient" not in sheet and ".card" in sheet
 
 
 def test_the_shortcut_is_added_once_and_removed_cleanly():

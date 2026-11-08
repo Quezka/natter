@@ -70,4 +70,6 @@ MESSAGES = {
     "Keeps WhatsApp under a memory limit and its cache small. Applies after a restart.": "Держит WhatsApp в пределах памяти и с маленьким кэшем. После перезапуска.",
     "Language and updates": "Язык и обновления",
     "{app} {version}": "{app} {version}",
+    "On Windows, spelling follows the typing languages set in Windows' own settings.": "В Windows проверка орфографии следует языкам ввода из настроек Windows.",
+    "Uses less memory while Natter waits in the tray.": "Расходует меньше памяти, пока Natter ждёт в трее.",
 }

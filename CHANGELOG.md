@@ -4,6 +4,14 @@ All notable changes to Natter. Versions follow [Semantic Versioning](https://sem
 patch for fixes, minor for new features, major for breaking changes (while below 1.0,
 breaking changes bump the minor version).
 
+## [0.9.0] - 2026-11-09
+
+### Added
+- **On Windows too:** Do Not Disturb (tray and Settings: WhatsApp's pop-ups are held back while the unread count still shows), a Settings window, **Ctrl+Alt+W** to show and hide Natter from anywhere, and lighter memory use while Natter waits in the tray (Edge WebView2's low-memory mode). Spelling on Windows follows Windows' own typing languages.
+
+### Changed
+- Settings look plain and clear: no colour wash. On Windows the Settings header is real glass: the cards blur as they scroll under it.
+
 ## [0.8.2] - 2026-11-08
 
 ### Fixed

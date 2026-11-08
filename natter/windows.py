@@ -7,7 +7,8 @@ from pathlib import Path
 
 import webview
 
-from natter import autostart, config, i18n, single_instance
+from natter import autostart, config, i18n, single_instance, webpage
+from natter.hotkey_win import Hotkey
 from natter.i18n import _
 from natter.state import Preferences, WindowState, fit_size
 from natter.updates import default_updater
@@ -51,16 +52,75 @@ def run(debug: bool, background: bool) -> int:
         hidden=background,
     )
     quitting = False
+    visible = {"on": not background}
+    core_ref: dict = {}  # WebView2's CoreWebView2, once it's ready
+
+    def on_ui(action) -> None:
+        """Runs `action(core)` on the window's thread, where WebView2 must be used."""
+        core = core_ref.get("core")
+        if core is None:
+            return
+        from System import Action
+        try:
+            window.native.Invoke(Action(lambda: action(core)))
+        except Exception:
+            pass
+
+    def save_memory(low: bool) -> None:
+        # WebView2 trims what it keeps in memory while it's out of sight (needs WebView2 1.0.1185 or later).
+        def apply(core) -> None:
+            try:
+                from Microsoft.Web.WebView2.Core import CoreWebView2MemoryUsageTargetLevel as Level
+                core.MemoryUsageTargetLevel = Level.Low if low else Level.Normal
+            except Exception:
+                pass
+        on_ui(apply)
 
     def show() -> None:
+        visible["on"] = True
+        save_memory(False)
         window.show()
         window.restore()
+
+    def hide() -> None:
+        visible["on"] = False
+        window.hide()
+        if prefs.memory_saver:
+            save_memory(True)
+
+    def toggle() -> None:
+        hide() if visible["on"] else show()
 
     def quit_app() -> None:
         nonlocal quitting
         quitting = True
+        hotkey.stop()
         tray.stop()
         window.destroy()
+
+    hotkey = Hotkey(toggle)
+
+    def set_dnd(on: bool) -> None:
+        prefs.do_not_disturb = bool(on)
+        _save(prefs, prefs_path)
+        on_ui(lambda core: core.ExecuteScriptAsync(webpage.quiet_switch(prefs.do_not_disturb)))
+        tray.relabel()
+
+    def set_shortcut(on: bool) -> bool:
+        ok = hotkey.start() if on else (hotkey.stop() or True)
+        if ok:
+            prefs.shortcut = "<Control><Alt>w" if on else ""
+            _save(prefs, prefs_path)
+        return bool(ok)
+
+    def open_settings() -> None:
+        api = _SettingsApi(prefs, lambda: _save(prefs, prefs_path), set_dnd, set_shortcut, set_language,
+                           lambda on: toggle_start_on_login() if bool(on) != prefs.start_on_login else None,
+                           lambda on: toggle_auto_update() if bool(on) != updater.auto_check() else None,
+                           lambda: update_ui.check(interactive=True))
+        webview.create_window(_("{app} settings").format(app=config.APP_NAME),
+                              html=webpage.settings_page(prefs, updater.auto_check(), _windows_dark()),
+                              js_api=api, width=540, height=760, min_size=(420, 480))
 
     def toggle_start_on_login() -> None:
         prefs.start_on_login = not prefs.start_on_login
@@ -83,7 +143,8 @@ def run(debug: bool, background: bool) -> int:
     tray = _Tray(show, quit_app, toggle_start_on_login, lambda: prefs.start_on_login,
                  set_language, lambda: prefs.language,
                  lambda: update_ui.check(interactive=True), toggle_auto_update,
-                 updater.auto_check)
+                 updater.auto_check, lambda: set_dnd(not prefs.do_not_disturb),
+                 lambda: prefs.do_not_disturb, open_settings)
     holder["show"] = show
     tuned = False
 
@@ -91,7 +152,7 @@ def run(debug: bool, background: bool) -> int:
         nonlocal tuned
         if not tuned:
             tuned = True
-            _tune_webview2(window, tray.set_unread)
+            _tune_webview2(window, tray.set_unread, core_ref, lambda: prefs.do_not_disturb)
 
     def on_closing():
         state.width, state.height = window.width, window.height
@@ -99,21 +160,68 @@ def run(debug: bool, background: bool) -> int:
         if quitting:
             return None
         # Closing hides to the tray, like Discord; WhatsApp keeps running for notifications.
-        threading.Thread(target=window.hide, daemon=True).start()
+        threading.Thread(target=hide, daemon=True).start()
         return False  # cancels the close
 
     window.events.loaded += on_loaded
     window.events.closing += on_closing
     tray.start()
     update_ui.start()
+    if prefs.shortcut and not hotkey.start():
+        prefs.shortcut = ""  # another app has Ctrl+Alt+W now
+        _save(prefs, prefs_path)
     webview.start(
         gui="edgechromium",
         debug=debug,
         private_mode=False,
         storage_path=str(config.data_dir() / "web"),
     )
+    hotkey.stop()
     tray.stop()
     return 0
+
+
+class _SettingsApi:
+    """What the Settings page's switches call (pywebview's js_api: each method is `pywebview.api.<name>`)."""
+
+    def __init__(self, prefs, save, set_dnd, set_shortcut, set_language, set_start_on_login, set_auto_update,
+                 check_updates) -> None:
+        self._prefs, self._save = prefs, save
+        self._dnd, self._shortcut, self._language = set_dnd, set_shortcut, set_language
+        self._login, self._auto, self._check = set_start_on_login, set_auto_update, check_updates
+
+    def set_dnd(self, on):
+        self._dnd(bool(on))
+
+    def set_shortcut(self, on):
+        return self._shortcut(bool(on))
+
+    def set_memory(self, on):
+        self._prefs.memory_saver = bool(on)
+        self._save()
+
+    def set_language(self, code):
+        self._language(str(code))
+
+    def set_start_on_login(self, on):
+        self._login(bool(on))
+
+    def set_auto_update(self, on):
+        self._auto(bool(on))
+
+    def check_updates(self):
+        self._check()
+
+
+def _windows_dark() -> bool:
+    """Whether Windows apps are set to dark."""
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                            r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize") as key:
+            return winreg.QueryValueEx(key, "AppsUseLightTheme")[0] == 0
+    except OSError:
+        return False
 
 
 def _save(obj, path: Path) -> None:
@@ -131,7 +239,8 @@ class _Tray:
 
     def __init__(self, on_open, on_quit, on_toggle_login, login_checked, on_language,
                  chosen_language, on_check_updates=lambda: None, on_toggle_auto=lambda: None,
-                 auto_checked=lambda: True) -> None:
+                 auto_checked=lambda: True, on_toggle_dnd=lambda: None, dnd_checked=lambda: False,
+                 on_settings=lambda: None) -> None:
         import pystray
         from PIL import Image
 
@@ -151,6 +260,9 @@ class _Tray:
         menu = pystray.Menu(
             pystray.MenuItem(lambda _item: _("Open {app}").format(app=config.APP_NAME),
                              lambda: on_open(), default=True),
+            pystray.MenuItem(lambda _item: _("Do Not Disturb"), lambda: on_toggle_dnd(),
+                             checked=lambda _item: dnd_checked()),
+            pystray.MenuItem(lambda _item: _("Settings…"), lambda: on_settings()),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem(lambda _item: _("Start on login"), lambda: on_toggle_login(),
                              checked=lambda _item: login_checked()),
@@ -199,7 +311,7 @@ def _badge(image):
     return badged
 
 
-def _tune_webview2(window, on_unread) -> None:
+def _tune_webview2(window, on_unread, core_ref=None, quiet=lambda: False) -> None:
     """Undo pywebview's kiosk-style defaults and wire up what a chat app needs."""
     from Microsoft.Web.WebView2.Core import CoreWebView2PermissionKind, CoreWebView2PermissionState
     from System import Action
@@ -228,5 +340,11 @@ def _tune_webview2(window, on_unread) -> None:
         settings.AreBrowserAcceleratorKeysEnabled = True  # Ctrl+F, Ctrl+R, zoom keys
         core.PermissionRequested += on_permission
         core.DocumentTitleChanged += on_title
+        # Do Not Disturb: a small script holds back WhatsApp's pop-ups while it's on (webpage.QUIET_SCRIPT).
+        core.AddScriptToExecuteOnDocumentCreatedAsync(webpage.QUIET_SCRIPT)
+        core.ExecuteScriptAsync(webpage.QUIET_SCRIPT + webpage.quiet_switch(quiet()))
+        core.NavigationCompleted += lambda _s, _a: core.ExecuteScriptAsync(webpage.quiet_switch(quiet()))
+        if core_ref is not None:
+            core_ref["core"] = core
 
     form.Invoke(Action(tune))

@@ -30,6 +30,11 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.9.0" date="2026-11-09">
+      <description>
+        <p>Do Not Disturb, Settings, Ctrl+Alt+W and lighter memory on Windows too; plainer Settings</p>
+      </description>
+    </release>
     <release version="0.8.2" date="2026-11-08">
       <description>
         <p>the tray menu updates at once after changes</p>

@@ -1,5 +1,5 @@
 """The suite's look for Natter's own windows (Settings), as GTK CSS: the same colour tokens as suite-kit
-(`quezka_ui/theme.py`), with the glass look on top. Pure Python, no GTK, so it's tested without a display."""
+(`quezka_ui/theme.py`). Plain backgrounds, never a gradient wash. Pure Python, no GTK, so it's tested without a display."""
 from __future__ import annotations
 
 LIGHT = {
@@ -30,20 +30,16 @@ def rgba(colour: str, alpha: float) -> str:
 
 
 def css(dark: bool) -> str:
-    """The style sheet for the Settings window: a colour wash, frosted cards with a light edge, big clear text."""
+    """The style sheet for the Settings window: plain background, solid cards with a light top edge, big clear
+    text. (GTK 3 can't blur what's behind a widget, so there's no glass here; never a gradient wash instead.)"""
     t = DARK if dark else LIGHT
-    wash_a = mix(t["bg"], t["accent"], 0.20 if dark else 0.16)
-    wash_b = mix(t["bg"], t["glow"], 0.13 if dark else 0.10)
-    edge = rgba("#ffffff", 0.14 if dark else 0.92)
+    edge = rgba("#ffffff", 0.10 if dark else 0.95)
     return f"""
-    window.natter-settings {{
-        background-image: linear-gradient(135deg, {wash_a} 0%, {t["bg"]} 50%, {wash_b} 100%);
-        color: {t["text"]};
-    }}
+    window.natter-settings {{ background-color: {t["bg"]}; color: {t["text"]}; }}
     .natter-settings .title {{ font-size: 20pt; font-weight: 800; }}
     .natter-settings .card {{
-        background-color: {rgba(t["surface"], 0.70)};
-        border: 1px solid {rgba(t["accent"], 0.18)};
+        background-color: {t["surface"]};
+        border: 1px solid {rgba(t["border"], 0.45)};
         border-top-color: {edge};
         border-radius: 18px;
         padding: 14px 16px;

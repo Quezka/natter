@@ -4,7 +4,7 @@ import ast
 from pathlib import Path
 
 PACKAGE = Path(__file__).resolve().parent.parent / "natter"
-CORE = ("config", "state", "look", "updates", "i18n", "autostart", "single_instance")
+CORE = ("config", "state", "look", "updates", "i18n", "autostart", "single_instance", "webpage")
 PLATFORM = ("gi", "webview", "pystray", "clr", "System", "natter.linux", "natter.windows", "natter.tray_linux",
             "natter.updates_gtk", "natter.updates_win", "natter.settings_gtk")
 
