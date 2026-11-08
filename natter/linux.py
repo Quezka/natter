@@ -12,7 +12,7 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("WebKit2", "4.1")
 from gi.repository import Gdk, Gio, GLib, Gtk, WebKit2  # noqa: E402
 
-from natter import autostart, config, i18n  # noqa: E402
+from natter import autostart, config, i18n, look  # noqa: E402
 from natter.i18n import _  # noqa: E402
 from natter.state import Preferences, WindowState, fit_size, starting_zoom  # noqa: E402
 from natter.updates import default_updater  # noqa: E402
@@ -22,6 +22,8 @@ ASSETS = Path(__file__).resolve().parent / "assets"
 ZOOM_STEP = 0.1
 MENU_SHOW, MENU_START_ON_LOGIN, MENU_QUIT, MENU_LANGUAGE = 1, 3, 5, 6
 MENU_CHECK_UPDATES, MENU_AUTO_UPDATE = 7, 8
+MENU_SETTINGS, MENU_DND = 20, 21
+MEMORY_LIMIT_MB = 700  # WebKit trims its caches above this (memory saver)
 MENU_FIRST_LANGUAGE = 10  # one radio item per i18n.LANGUAGES entry from here
 
 # Only the things WhatsApp Web actually asks for: notifications, the microphone for
@@ -60,6 +62,8 @@ class NatterApp(Gtk.Application):
         self._add_action("zoom-in", lambda: self._zoom(ZOOM_STEP), "<Primary>plus", "<Primary>equal")
         self._add_action("zoom-out", lambda: self._zoom(-ZOOM_STEP), "<Primary>minus")
         self._add_action("zoom-reset", lambda: self._zoom(None), "<Primary>0")
+        self._add_action("settings", self._open_settings, "<Primary>comma")
+        self._add_action("toggle", self._toggle)
         if not self.prefs_path.exists():
             self._save_prefs()
         autostart.set_enabled(self.prefs.start_on_login)  # also refreshes a moved launcher
@@ -122,6 +126,8 @@ class NatterApp(Gtk.Application):
         ]
         return [
             MenuItem(MENU_SHOW, _("Open {app}").format(app=config.APP_NAME), self._show),
+            MenuItem(MENU_DND, _("Do Not Disturb"), self._toggle_dnd, checked=self.prefs.do_not_disturb),
+            MenuItem(MENU_SETTINGS, _("Settings…"), self._open_settings),
             MenuItem(2, separator=True),
             MenuItem(MENU_START_ON_LOGIN, _("Start on login"), self._toggle_start_on_login,
                      checked=self.prefs.start_on_login),
@@ -141,6 +147,58 @@ class NatterApp(Gtk.Application):
         autostart.set_enabled(self.prefs.start_on_login)  # rewrites the entry's comment
         if self.tray is not None:
             self.tray.set_items(self._menu())
+
+    def _toggle_dnd(self) -> None:
+        self.prefs.do_not_disturb = not self.prefs.do_not_disturb
+        self._save_prefs()
+        self._refresh_tray()
+
+    def _refresh_tray(self) -> None:
+        if self.tray is not None and hasattr(self.tray, "set_menu"):
+            self.tray.set_menu(self._menu())
+
+    def _open_settings(self) -> None:
+        from natter.settings_gtk import Actions, SettingsWindow
+
+        def start_on_login(on: bool) -> None:
+            if on != self.prefs.start_on_login:
+                self._toggle_start_on_login()
+
+        def changed() -> None:
+            self._save_prefs()
+            self._apply_spelling()
+            self._refresh_tray()
+
+        actions = Actions(changed=changed, language=self._set_language, start_on_login=start_on_login,
+                          check_updates=lambda: self.update_ui.check(interactive=True),
+                          shortcut=self._set_shortcut, shortcut_possible=_shortcut_settings() is not None)
+        window = SettingsWindow(self.window, self.prefs, actions, self.updater.auto_check(),
+                                lambda on: self._toggle_auto_update() if on != self.updater.auto_check() else None)
+        window.show_all()
+
+    def _apply_spelling(self) -> None:
+        if self.view is not None:
+            context = self.view.get_context()
+            langs = self.prefs.spelling()
+            context.set_spell_checking_enabled(bool(langs))
+            context.set_spell_checking_languages(langs or _spelling_languages())
+
+    def _set_shortcut(self, on: bool) -> bool:
+        """Adds (or removes) a GNOME custom shortcut that runs `natter --toggle`. False if the desktop can't."""
+        media = _shortcut_settings()
+        if media is None:
+            return False
+        paths = list(media.get_strv("custom-keybindings"))
+        if on:
+            binding = Gio.Settings.new_with_path(
+                "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding", look.SHORTCUT_PATH)
+            binding.set_string("name", config.APP_NAME)
+            binding.set_string("command", f"{config.APP_ID.rsplit('.', 1)[-1].lower()} --toggle")
+            binding.set_string("binding", look.SHORTCUT)
+            media.set_strv("custom-keybindings", look.with_shortcut(paths))
+        else:
+            media.set_strv("custom-keybindings", look.without_shortcut(paths))
+        return True
 
     def _toggle_start_on_login(self) -> None:
         self.prefs.start_on_login = not self.prefs.start_on_login
@@ -184,10 +242,13 @@ class NatterApp(Gtk.Application):
         cookies.set_persistent_storage(str(data / "cookies.sqlite"), WebKit2.CookiePersistentStorage.SQLITE)
         cookies.set_accept_policy(WebKit2.CookieAcceptPolicy.NO_THIRD_PARTY)
 
-        context = WebKit2.WebContext.new_with_website_data_manager(manager)
-        context.set_cache_model(WebKit2.CacheModel.WEB_BROWSER)
-        context.set_spell_checking_enabled(True)
-        context.set_spell_checking_languages(_spelling_languages())
+        context = self._web_context(manager)
+        # The memory saver keeps a smaller cache: WhatsApp is one page, it doesn't need a browser's back-forward cache.
+        context.set_cache_model(WebKit2.CacheModel.DOCUMENT_BROWSER if self.prefs.memory_saver
+                                else WebKit2.CacheModel.WEB_BROWSER)
+        langs = self.prefs.spelling()
+        context.set_spell_checking_enabled(bool(langs))
+        context.set_spell_checking_languages(langs or _spelling_languages())
         context.connect("download-started", self._on_download_started)
 
         view = WebKit2.WebView(web_context=context)
@@ -230,6 +291,18 @@ class NatterApp(Gtk.Application):
 
         self.window, self.view = window, view
         view.load_uri(config.URL)
+
+    def _web_context(self, manager) -> "WebKit2.WebContext":
+        """The web context, with a memory limit when the memory saver is on (WebKitGTK 2.34 and later)."""
+        settings_cls = getattr(WebKit2, "MemoryPressureSettings", None)
+        if self.prefs.memory_saver and settings_cls is not None:
+            try:
+                pressure = settings_cls.new()
+                pressure.set_memory_limit(MEMORY_LIMIT_MB)
+                return WebKit2.WebContext(website_data_manager=manager, memory_pressure_settings=pressure)
+            except (TypeError, GLib.Error, AttributeError):
+                pass  # an older WebKit: carry on without the limit
+        return WebKit2.WebContext.new_with_website_data_manager(manager)
 
     @staticmethod
     def _work_area() -> tuple[int, int] | None:
@@ -294,6 +367,8 @@ class NatterApp(Gtk.Application):
         return True
 
     def _on_show_notification(self, _view, notification) -> bool:
+        if self.prefs.do_not_disturb:
+            return True  # handled: nothing pops up; the tray still counts what's unread
         notification.connect("clicked", lambda _n: self.activate())
         return False  # let WebKit show it through the desktop's notification service
 
@@ -322,5 +397,22 @@ def _spelling_languages() -> list[str]:
     return names[:3] or ["en_US"]
 
 
-def run(debug: bool, background: bool, argv: list[str]) -> int:
-    return NatterApp(debug, background).run(argv)
+def _shortcut_settings():
+    """GNOME's shortcut settings, or None on a desktop without them."""
+    source = Gio.SettingsSchemaSource.get_default()
+    if source is None or source.lookup("org.gnome.settings-daemon.plugins.media-keys", True) is None:
+        return None
+    if source.lookup("org.gnome.settings-daemon.plugins.media-keys.custom-keybinding", True) is None:
+        return None
+    return Gio.Settings.new("org.gnome.settings-daemon.plugins.media-keys")
+
+
+def run(debug: bool, background: bool, argv: list[str], toggle: bool = False) -> int:
+    app = NatterApp(debug, background)
+    if toggle:
+        # Sent to the running Natter (the keyboard shortcut): show it, or hide it if it's in front.
+        app.register(None)
+        if app.get_is_remote():
+            app.activate_action("toggle", None)
+            return 0
+    return app.run(argv)

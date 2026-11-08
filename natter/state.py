@@ -79,6 +79,25 @@ class Preferences:
     auto_update_check: bool = True  # look for a new version about once a day
     update_last_check: str = ""
     update_skipped: str = ""  # a version the user said "skip this version" to
+    do_not_disturb: bool = False  # WhatsApp's notifications stay quiet; the unread count still shows
+    memory_saver: bool = True  # a memory limit and a smaller cache for the web page (applies after a restart)
+    spell_languages: str = "en_US,it_IT,ru_RU"  # comma-separated; the user writes in all three
+    shortcut: str = ""  # the desktop shortcut that shows and hides Natter, once set up (e.g. "<Control><Alt>w")
+
+    def spelling(self) -> list[str]:
+        """The spell-check languages, in order, without blanks or doubles."""
+        out: list[str] = []
+        for code in self.spell_languages.split(","):
+            code = code.strip()
+            if code and code not in out:
+                out.append(code)
+        return out
+
+    def set_spelling(self, code: str, on: bool) -> None:
+        langs = [c for c in self.spelling() if c != code]
+        if on:
+            langs.append(code)
+        self.spell_languages = ",".join(langs)
 
     @classmethod
     def load(cls, path: Path) -> "Preferences":

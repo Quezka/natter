@@ -4,6 +4,17 @@ All notable changes to Natter. Versions follow [Semantic Versioning](https://sem
 patch for fixes, minor for new features, major for breaking changes (while below 1.0,
 breaking changes bump the minor version).
 
+## [0.8.0] - 2026-11-08
+
+### Added
+- **Settings window** in the suite's glass look (Ctrl+, or the tray): notifications, start on login, spelling, memory, language, updates.
+- **Do Not Disturb** in the tray and Settings: no pop-ups or sounds, the unread count still shows.
+- Spell checking in English, Italian and Russian, chosen in Settings.
+- **Ctrl+Alt+W** shows and hides Natter from anywhere (GNOME; switch it on in Settings), and `natter --toggle`.
+
+### Changed
+- Lighter on memory: a memory limit and a smaller cache for WhatsApp (Settings, "Save memory").
+
 ## [0.7.0] - 2026-10-05
 
 ### Added

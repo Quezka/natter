@@ -15,6 +15,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--debug", action="store_true", help=_("enable the web inspector"))
     parser.add_argument("--background", action="store_true",
                         help=_("start hidden in the tray (used when starting on login)"))
+    parser.add_argument("--toggle", action="store_true", help=_("show or hide the running Natter"))
     parser.add_argument("--version", action="version", version=_("{app} {version} by {developer}").format(
         app=APP_NAME, version=__version__, developer=DEVELOPER))
     args, rest = parser.parse_known_args(argv)
@@ -23,4 +24,4 @@ def main(argv: list[str] | None = None) -> int:
         from natter import windows
         return windows.run(debug=args.debug, background=args.background)
     from natter import linux
-    return linux.run(debug=args.debug, background=args.background, argv=[sys.argv[0], *rest])
+    return linux.run(debug=args.debug, background=args.background, argv=[sys.argv[0], *rest], toggle=args.toggle)
