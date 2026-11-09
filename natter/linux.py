@@ -10,9 +10,9 @@ import gi
 gi.require_version("Gdk", "3.0")
 gi.require_version("Gtk", "3.0")
 gi.require_version("WebKit2", "4.1")
-from gi.repository import Gdk, Gio, GLib, Gtk, WebKit2  # noqa: E402
+from gi.repository import Gdk, Gio, GLib, GObject, Gtk, WebKit2  # noqa: E402
 
-from natter import autostart, config, i18n, look  # noqa: E402
+from natter import autostart, config, drop, i18n, look  # noqa: E402
 from natter.i18n import _  # noqa: E402
 from natter.state import Preferences, WindowState, fit_size, starting_zoom  # noqa: E402
 from natter.updates import default_updater  # noqa: E402
@@ -250,6 +250,11 @@ class NatterApp(Gtk.Application):
         context.set_spell_checking_enabled(bool(langs))
         context.set_spell_checking_languages(langs or _spelling_languages())
         context.connect("download-started", self._on_download_started)
+        self.shelf = drop.DropShelf()
+        context.register_uri_scheme(drop.SCHEME, self._serve_dropped)
+        security = context.get_security_manager()
+        security.register_uri_scheme_as_secure(drop.SCHEME)
+        security.register_uri_scheme_as_cors_enabled(drop.SCHEME)
 
         view = WebKit2.WebView(web_context=context)
         settings = view.get_settings()
@@ -276,6 +281,11 @@ class NatterApp(Gtk.Application):
         view.connect("notify::title", self._on_title_changed)
         view.connect("web-process-terminated", lambda v, _reason: v.reload())
         view.connect("create", lambda *_: None)  # never open extra app windows
+        # Files dragged in from the file manager: taken here and handed to WhatsApp (see drop.py).
+        view.connect("drag-motion", self._on_drag_motion)
+        view.connect("drag-leave", self._on_drag_leave)
+        view.connect("drag-drop", self._on_drag_drop)
+        view.connect("drag-data-received", self._on_drag_data)
 
         window = Gtk.ApplicationWindow(application=self, title=config.APP_NAME)
         window.set_default_size(*(fit_size(self.state.width, self.state.height, *area) if area
@@ -337,6 +347,66 @@ class NatterApp(Gtk.Application):
         self.state.zoom_chosen = True  # from now on the zoom is yours, whatever the screen
         level = 1.0 if step is None else self.view.get_zoom_level() + step
         self.view.set_zoom_level(min(max(round(level, 2), 0.5), 3.0))
+
+    # --- files dropped from other apps --------------------------------------------------
+
+    @staticmethod
+    def _carries_files(context) -> bool:
+        return any(target.name() == "text/uri-list" for target in context.list_targets())
+
+    def _on_drag_motion(self, _view, context, _x, _y, time) -> bool:
+        if not self._carries_files(context):
+            return False  # text and links dragged inside the page: WebKit's own handling
+        Gdk.drag_status(context, Gdk.DragAction.COPY, time)
+        return True
+
+    def _on_drag_leave(self, _view, context, _time) -> bool:
+        return self._carries_files(context)
+
+    def _on_drag_drop(self, view, context, x, y, time) -> bool:
+        if not self._carries_files(context):
+            return False
+        self._drop_at = (x, y)
+        view.drag_get_data(context, Gdk.Atom.intern("text/uri-list", False), time)
+        return True
+
+    def _on_drag_data(self, view, context, _x, _y, data, _info, time) -> bool:
+        if not self._carries_files(context):
+            return False
+        files = drop.files_from_uris(data.get_uris() or [])
+        Gtk.drag_finish(context, bool(files), False, time)
+        if files:
+            token = self.shelf.put(files)
+            # GTK gives window pixels; the page works in CSS pixels, which the zoom scales.
+            zoom = view.get_zoom_level() or 1.0
+            x, y = getattr(self, "_drop_at", (0, 0))
+            view.evaluate_javascript(drop.drop_script(token, files, x / zoom, y / zoom), -1, None, None, None)
+        GObject.signal_stop_emission_by_name(view, "drag-data-received")
+        return True
+
+    def _serve_dropped(self, request) -> None:
+        dropped = self.shelf.take(request.get_uri())
+        if dropped is None:
+            request.finish_error(GLib.Error.new_literal(Gio.io_error_quark(), "Not a dropped file",
+                                                        Gio.IOErrorEnum.NOT_FOUND))
+            return
+        try:
+            stream = Gio.File.new_for_path(str(dropped.path)).read(None)
+            size = dropped.path.stat().st_size
+        except (GLib.Error, OSError) as error:
+            request.finish_error(GLib.Error.new_literal(Gio.io_error_quark(), str(error), Gio.IOErrorEnum.FAILED))
+            return
+        response = WebKit2.URISchemeResponse.new(stream, size)
+        response.set_content_type(dropped.mime)
+        try:
+            gi.require_version("Soup", "3.0")
+            from gi.repository import Soup
+            headers = Soup.MessageHeaders.new(Soup.MessageHeadersType.RESPONSE)
+            headers.append("Access-Control-Allow-Origin", "*")
+            response.set_http_headers(headers)
+        except (ValueError, ImportError, AttributeError):
+            pass  # older WebKit: the scheme is CORS-enabled, which is enough there
+        request.finish_with_response(response)
 
     # --- webview signals -----------------------------------------------------------
 

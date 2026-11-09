@@ -4,6 +4,12 @@ All notable changes to Natter. Versions follow [Semantic Versioning](https://sem
 patch for fixes, minor for new features, major for breaking changes (while below 1.0,
 breaking changes bump the minor version).
 
+## [0.9.2] - 2026-11-09
+
+- Linux: files and pictures dragged in from Files or the desktop now land in the chat under the pointer, as
+  in Chrome. WebKitGTK never passed them on to WhatsApp, so Natter now takes the drop itself and hands the files
+  to the page.
+
 ## [0.9.1] - 2026-11-09
 
 - Windows Settings window: the glass header floats inset over the cards, with the same corners and gaps as them, and is more see-through.

@@ -30,6 +30,11 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="0.9.2" date="2026-11-09">
+      <description>
+        <p>Files and pictures dragged in from Files or the desktop land in the chat (Linux).</p>
+      </description>
+    </release>
     <release version="0.9.1" date="2026-11-09">
       <description>
         <p>Settings header lines up with its cards</p>
