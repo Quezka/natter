@@ -12,7 +12,8 @@ import mimetypes
 import secrets
 from dataclasses import dataclass
 from pathlib import Path
-from urllib.parse import unquote, urlparse
+from urllib.parse import urlparse
+from urllib.request import url2pathname
 
 SCHEME = "natter-file"
 
@@ -34,7 +35,7 @@ def files_from_uris(uris: list[str]) -> list[Dropped]:
         parsed = urlparse(uri)
         if parsed.scheme != "file" or parsed.netloc not in ("", "localhost"):
             continue
-        path = Path(unquote(parsed.path))
+        path = Path(url2pathname(parsed.path))  # also C:\\... from file:///C:/... on Windows
         if not path.is_file():
             continue
         mime = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
