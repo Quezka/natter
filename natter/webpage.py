@@ -63,11 +63,13 @@ body {{ margin: 0; font: 15px "Segoe UI Variable", "Segoe UI", sans-serif; color
   background: {t["bg"]}; min-height: 100vh; overflow-x: hidden; }}
 /* Glass the Apple way: the page is plain and the cards solid; the header floats over them and blurs them as they
    scroll underneath. */
-header {{ position: sticky; top: 0; z-index: 2; padding: 18px 22px 12px;
-  background: {look.rgba(t["bg"], .55)}; backdrop-filter: blur(24px) saturate(160%);
+/* Corners nest: the header floats inset exactly like the cards, with the same radius and the same 10 px gap. */
+header {{ position: sticky; top: 10px; z-index: 2; margin: 10px 10px 0; padding: 14px 16px;
+  border-radius: 20px; background: {look.rgba(t["bg"], .40)}; backdrop-filter: blur(24px) saturate(160%);
   -webkit-backdrop-filter: blur(24px) saturate(160%);
-  border-bottom: 1px solid {look.rgba("#ffffff", .10) if dark else look.rgba("#000000", .08)}; }}
-main {{ padding: 8px 22px 22px; display: grid; gap: 14px; }}
+  border: 1px solid {look.rgba("#ffffff", .10) if dark else look.rgba("#000000", .08)};
+  border-top-color: {look.rgba("#ffffff", .16 if dark else .9)}; }}
+main {{ padding: 10px; display: grid; gap: 10px; }}
 h1 {{ margin: 0; font-size: 26px; font-weight: 800; }}
 .card {{ border-radius: 20px; padding: 14px 16px; background: {t["surface"]};
   border: 1px solid {look.rgba(t["border"], .45)}; border-top-color: {look.rgba("#ffffff", .10 if dark else .95)}; }}

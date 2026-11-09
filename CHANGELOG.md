@@ -4,6 +4,10 @@ All notable changes to Natter. Versions follow [Semantic Versioning](https://sem
 patch for fixes, minor for new features, major for breaking changes (while below 1.0,
 breaking changes bump the minor version).
 
+## [0.9.1] - 2026-11-09
+
+- Windows Settings window: the glass header floats inset over the cards, with the same corners and gaps as them, and is more see-through.
+
 ## [0.9.0] - 2026-11-09
 
 ### Added
