@@ -70,6 +70,18 @@ def _switch_row(box: Gtk.Box, title: str, hint: str | None, on: bool, toggled: C
     return switch
 
 
+def settings_size(window: Gtk.Window) -> tuple[int, int]:
+    """Small enough to sit inside the screen's work area with room around it (it used to open taller than a
+    laptop screen); the page scrolls when there's more."""
+    width, height = 520, 560
+    display = window.get_display() if window is not None else None
+    monitor = display.get_primary_monitor() or display.get_monitor(0) if display is not None else None
+    if monitor is not None:
+        area = monitor.get_workarea()
+        width, height = min(width, area.width - 80), min(height, int(area.height * 0.75))
+    return max(width, 360), max(height, 320)
+
+
 class SettingsWindow(Gtk.Window):
     def __init__(self, parent: Gtk.Window | None, prefs: Preferences, actions: Actions, auto_update: bool,
                  set_auto_update: Callable[[bool], None]) -> None:
@@ -77,7 +89,7 @@ class SettingsWindow(Gtk.Window):
         self.prefs, self.actions = prefs, actions
         if parent is not None:
             self.set_transient_for(parent)
-        self.set_default_size(560, 640)
+        self.set_default_size(*settings_size(self))
         self.set_position(Gtk.WindowPosition.CENTER_ON_PARENT)
         _apply_css(self)
 

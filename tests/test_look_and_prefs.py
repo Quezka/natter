@@ -27,3 +27,13 @@ def test_preferences_round_trip_with_the_new_choices(tmp_path):
     prefs.save(path)
     back = Preferences.load(path)
     assert back.spelling() == ["en_US", "it_IT", "de_DE"] and back.do_not_disturb
+
+
+def test_page_notifications_are_checked_and_keyed_by_chat():
+    from natter import webpage
+    m = webpage.notify_message('{"kind": "show", "id": 3, "title": "Sam", "body": "hi", "tag": "chat1"}')
+    assert m["title"] == "Sam" and webpage.notification_key(m) == "wa-chat1"
+    assert webpage.notification_key(webpage.notify_message('{"kind": "close", "id": 4}')) == "wa-4"
+    for bad in ("nope", '{"kind": "run", "id": 1}', '{"kind": "show", "id": "1"}', "[]"):
+        assert webpage.notify_message(bad) is None
+    assert "requestPermission" in webpage.LINUX_NOTIFY_SCRIPT and "natterNotify" in webpage.LINUX_NOTIFY_SCRIPT

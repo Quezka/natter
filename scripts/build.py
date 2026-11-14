@@ -29,6 +29,8 @@ DIST = ROOT / "dist"
 
 DEB_DEPENDS = ("python3 (>= 3.10), python3-gi, gir1.2-gtk-3.0, gir1.2-webkit2-4.1, "
                "librsvg2-common")
+# calls: webkit webrtc need gstreamer webrtcbin (plugins-bad) + ice (nice)
+DEB_RECOMMENDS = "gstreamer1.0-plugins-bad, gstreamer1.0-nice, gstreamer1.0-pipewire"
 LAUNCHER = """#!/bin/sh
 PYTHONPATH=/usr/lib/natter exec /usr/bin/python3 -m natter "$@"
 """
@@ -61,6 +63,7 @@ Section: net
 Priority: optional
 Architecture: all
 Depends: {DEB_DEPENDS}
+Recommends: {DEB_RECOMMENDS}
 Maintainer: {natter.DEVELOPER} <{natter.MAINTAINER_EMAIL}>
 Homepage: {natter.HOMEPAGE}
 Description: WhatsApp Web in a lightweight native window

@@ -2,15 +2,16 @@
 (`quezka_ui/theme.py`). Plain backgrounds, never a gradient wash. Pure Python, no GTK, so it's tested without a display."""
 from __future__ import annotations
 
+# material 3 tonal = suite tokens 2026-11-14 (suite-rs/design/tokens.json)
 LIGHT = {
-    "bg": "#f3f2ff", "surface": "#ffffff", "raised": "#e9e8ff", "border": "#b3b6cc",
-    "text": "#0b0d14", "muted": "#343b4d", "faint": "#4d5466",
-    "accent": "#4f46e5", "accent_soft": "#dcdbff", "on_accent": "#ffffff", "glow": "#ec4899",
+    "bg": "#f7f7fb", "surface": "#ffffff", "raised": "#eaeaf2", "border": "#b6b6c4",
+    "text": "#111116", "muted": "#3d3d46", "faint": "#5b5b66",
+    "accent": "#4f46e5", "accent_soft": "#e3e2fb", "on_accent": "#ffffff", "glow": "#4f46e5",
 }
 DARK = {
-    "bg": "#0e0e19", "surface": "#1a1a2b", "raised": "#27273f", "border": "#4b4e66",
-    "text": "#f6f7fb", "muted": "#cbcfdd", "faint": "#a2a8bb",
-    "accent": "#a9a6ff", "accent_soft": "#3b3984", "on_accent": "#0b0b14", "glow": "#ec4899",
+    "bg": "#121218", "surface": "#1d1d24", "raised": "#2a2a33", "border": "#4a4a56",
+    "text": "#f8f7fc", "muted": "#cfcfd9", "faint": "#a8a8b4",
+    "accent": "#a9a6ff", "accent_soft": "#37356e", "on_accent": "#0b0b14", "glow": "#a9a6ff",
 }
 
 
@@ -41,7 +42,7 @@ def css(dark: bool) -> str:
         background-color: {t["surface"]};
         border: 1px solid {rgba(t["border"], 0.45)};
         border-top-color: {edge};
-        border-radius: 18px;
+        border-radius: 28px;
         padding: 14px 16px;
     }}
     .natter-settings .card-title {{ color: {t["accent"]}; font-weight: 700; }}

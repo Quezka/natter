@@ -12,7 +12,7 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("WebKit2", "4.1")
 from gi.repository import Gdk, Gio, GLib, GObject, Gtk, WebKit2  # noqa: E402
 
-from natter import autostart, config, drop, i18n, look  # noqa: E402
+from natter import autostart, config, drop, i18n, look, webpage  # noqa: E402
 from natter.i18n import _  # noqa: E402
 from natter.state import Preferences, WindowState, fit_size, starting_zoom  # noqa: E402
 from natter.updates import default_updater  # noqa: E402
@@ -64,6 +64,9 @@ class NatterApp(Gtk.Application):
         self._add_action("zoom-reset", lambda: self._zoom(None), "<Primary>0")
         self._add_action("settings", self._open_settings, "<Primary>comma")
         self._add_action("toggle", self._toggle)
+        open_chat = Gio.SimpleAction.new("open-chat", GLib.VariantType.new("i"))
+        open_chat.connect("activate", self._open_chat)
+        self.add_action(open_chat)
         if not self.prefs_path.exists():
             self._save_prefs()
         autostart.set_enabled(self.prefs.start_on_login)  # also refreshes a moved launcher
@@ -270,14 +273,22 @@ class NatterApp(Gtk.Application):
         settings.set_javascript_can_access_clipboard(True)
         settings.set_enable_back_forward_navigation_gestures(False)
         settings.set_enable_developer_extras(self.debug)
-        if settings.find_property("enable-webrtc"):
-            settings.set_property("enable-webrtc", True)
+        # calls: webrtc + media + encrypted media (whatsapp call ui check these)
+        for name in ("enable-webrtc", "enable-mediasource", "enable-encrypted-media", "enable-media-capabilities"):
+            if settings.find_property(name):
+                settings.set_property(name, True)
 
         area = self._work_area()
         view.set_zoom_level(starting_zoom(self.state, area[1] if area else None))
         view.connect("decide-policy", self._on_decide_policy)
         view.connect("permission-request", self._on_permission_request)
         view.connect("show-notification", self._on_show_notification)
+        content = view.get_user_content_manager()
+        content.register_script_message_handler("natterNotify")
+        content.connect("script-message-received::natterNotify", self._on_page_notification)
+        content.add_script(WebKit2.UserScript.new(
+            webpage.LINUX_NOTIFY_SCRIPT, WebKit2.UserContentInjectedFrames.TOP_FRAME,
+            WebKit2.UserScriptInjectionTime.START, None, None))
         view.connect("notify::title", self._on_title_changed)
         view.connect("web-process-terminated", lambda v, _reason: v.reload())
         view.connect("create", lambda *_: None)  # never open extra app windows
@@ -435,6 +446,31 @@ class NatterApp(Gtk.Application):
         else:
             request.deny()
         return True
+
+    def _on_page_notification(self, _content, result) -> None:
+        """A notification from WhatsApp, through the page's replaced Notification (webpage.LINUX_NOTIFY_SCRIPT)."""
+        value = result.get_js_value() if hasattr(result, "get_js_value") else result
+        message = webpage.notify_message(value.to_string() if value is not None else "")
+        if message is None:
+            return
+        key = webpage.notification_key(message)
+        if message["kind"] == "close":
+            self.withdraw_notification(key)
+            return
+        if self.prefs.do_not_disturb:
+            return  # nothing pops up; the tray still counts what's unread
+        note = Gio.Notification.new(message["title"] or config.APP_NAME)
+        if message["body"]:
+            note.set_body(message["body"])
+        note.set_icon(Gio.ThemedIcon.new(config.APP_ID))
+        note.set_priority(Gio.NotificationPriority.HIGH)
+        note.set_default_action_and_target("app.open-chat", GLib.Variant.new_int32(message["id"]))
+        self.send_notification(key, note)
+
+    def _open_chat(self, _action, target) -> None:
+        self.activate()
+        self.view.evaluate_javascript(f"window.__natterClicked && window.__natterClicked({target.get_int32()})",
+                                      -1, None, None, None)
 
     def _on_show_notification(self, _view, notification) -> bool:
         if self.prefs.do_not_disturb:

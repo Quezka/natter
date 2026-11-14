@@ -4,6 +4,13 @@ All notable changes to Natter. Versions follow [Semantic Versioning](https://sem
 patch for fixes, minor for new features, major for breaking changes (while below 1.0,
 breaking changes bump the minor version).
 
+## [0.10.0] - 2026-11-14
+
+- **Desktop notifications stay on.** WhatsApp no longer asks to "Turn on desktop notifications" after every restart: Natter takes WhatsApp's notifications itself and shows them as its own (Do Not Disturb still silences them; clicking one opens the chat).
+- **Calls:** WebRTC, media and encrypted media are switched on for WhatsApp Web calls. On Linux calls need GStreamer's WebRTC parts: `sudo apt install gstreamer1.0-plugins-bad gstreamer1.0-nice` (the .deb now recommends them).
+- The Settings window opens at a size that fits the screen.
+- The suite's new Material 3 tonal look, without glass.
+
 ## [0.9.3] - 2026-11-09
 
 - Dropped files are read correctly on Windows paths too (0.9.2's release build stopped on that test).

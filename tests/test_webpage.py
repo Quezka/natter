@@ -10,10 +10,10 @@ def test_the_quiet_script_wraps_notifications_once_and_switches():
     assert webpage.quiet_switch(False) == "window.__natterQuiet = false;"
 
 
-def test_the_settings_page_has_real_glass_and_every_switch():
+def test_the_settings_page_is_material_3_with_every_switch():
     prefs = Preferences(do_not_disturb=True, language="it")
     page = webpage.settings_page(prefs, auto_update=False, dark=True)
-    assert "backdrop-filter: blur(" in page and "position: sticky" in page  # a real glass header
+    assert "backdrop-filter" not in page and "position: sticky" in page  # a solid M3 header
     assert "gradient" not in page and "blob" not in page
     for name in ("set_dnd", "set_start_on_login", "set_shortcut", "set_memory", "set_language", "set_auto_update",
                  "check_updates"):
