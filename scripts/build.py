@@ -27,10 +27,12 @@ ASSETS = ROOT / "natter" / "assets"
 BUILD = ROOT / "build"
 DIST = ROOT / "dist"
 
-DEB_DEPENDS = ("python3 (>= 3.10), python3-gi, gir1.2-gtk-3.0, gir1.2-webkit2-4.1, "
-               "librsvg2-common")
-# calls: webkit webrtc need gstreamer webrtcbin (plugins-bad) + ice (nice)
-DEB_RECOMMENDS = "gstreamer1.0-plugins-bad, gstreamer1.0-nice, gstreamer1.0-pipewire"
+# linux engine = qt webengine (chromium, ubuntu build has H264): whatsapp calls work there; python3-gi for tray,
+# notifications (gio d-bus) and the gnome shortcut. webkitgtk only a fallback -> suggested, not needed
+DEB_DEPENDS = ("python3 (>= 3.10), python3-gi, python3-pyside6.qtwebenginewidgets, python3-pyside6.qtwebenginecore, "
+               "python3-pyside6.qtwidgets, python3-pyside6.qtnetwork, librsvg2-common")
+DEB_RECOMMENDS = "pipewire"
+DEB_SUGGESTS = "gir1.2-gtk-3.0, gir1.2-webkit2-4.1"
 LAUNCHER = """#!/bin/sh
 PYTHONPATH=/usr/lib/natter exec /usr/bin/python3 -m natter "$@"
 """
@@ -64,6 +66,7 @@ Priority: optional
 Architecture: all
 Depends: {DEB_DEPENDS}
 Recommends: {DEB_RECOMMENDS}
+Suggests: {DEB_SUGGESTS}
 Maintainer: {natter.DEVELOPER} <{natter.MAINTAINER_EMAIL}>
 Homepage: {natter.HOMEPAGE}
 Description: WhatsApp Web in a lightweight native window

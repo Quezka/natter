@@ -4,6 +4,15 @@ All notable changes to Natter. Versions follow [Semantic Versioning](https://sem
 patch for fixes, minor for new features, major for breaking changes (while below 1.0,
 breaking changes bump the minor version).
 
+## [0.11.0] - 2026-11-15
+
+- **Calls work on Linux.** Natter now runs WhatsApp on Chromium (Ubuntu's Qt WebEngine, installed with Natter) instead of WebKitGTK: voice and video calls, screen sharing and every video format, like in Chrome.
+- **About four times lighter:** around 280 MB of memory instead of over 1 GB. One page, one engine process, a capped cache, and a hidden window costs almost nothing.
+- Settings is a small native window now.
+- **New icon**, drawn like every other Quezka app.
+- The first time, you may have to link your phone again (scan the QR code): it's a new engine.
+- Without Qt WebEngine installed, Natter falls back to WebKitGTK (no calls); `NATTER_ENGINE=webkit` picks it on purpose.
+
 ## [0.10.0] - 2026-11-14
 
 - **Desktop notifications stay on.** WhatsApp no longer asks to "Turn on desktop notifications" after every restart: Natter takes WhatsApp's notifications itself and shows them as its own (Do Not Disturb still silences them; clicking one opens the chat).

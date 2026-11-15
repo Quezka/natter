@@ -53,7 +53,10 @@ def tray_tooltip(unread: int) -> str:
 
 def badged_svg(svg: str) -> str:
     """The app icon with a red dot in the corner, for the tray when chats are unread."""
-    dot = '<circle cx="212" cy="44" r="40" fill="#e5484d" stroke="#fff" stroke-width="10"/>'
+    box = re.search(r'viewBox="[\d.\s-]+?\s([\d.]+)\s[\d.]+"', svg)
+    k = float(box[1]) / 256 if box else 1.0  # dot laid out for a 256 box
+    dot = (f'<circle cx="{212 * k:g}" cy="{44 * k:g}" r="{40 * k:g}" fill="#e5484d" stroke="#fff"'
+           f' stroke-width="{10 * k:g}"/>')
     head, sep, tail = svg.rpartition("</svg>")
     return f"{head}{dot}\n{sep}{tail}" if sep else svg
 

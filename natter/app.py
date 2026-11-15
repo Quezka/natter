@@ -23,5 +23,11 @@ def main(argv: list[str] | None = None) -> int:
     if sys.platform == "win32":
         from natter import windows
         return windows.run(debug=args.debug, background=args.background)
+    import os
+    from natter import linux_qt
+    # qt webengine (chromium): calls work; webkitgtk only as a fallback (NATTER_ENGINE=webkit forces it)
+    if os.environ.get("NATTER_ENGINE") != "webkit" and linux_qt.available():
+        return linux_qt.run(debug=args.debug, background=args.background, argv=[sys.argv[0], *rest],
+                            toggle=args.toggle)
     from natter import linux
     return linux.run(debug=args.debug, background=args.background, argv=[sys.argv[0], *rest], toggle=args.toggle)
